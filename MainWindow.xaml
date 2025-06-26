@@ -1,0 +1,17 @@
+﻿<Window x:Class="No_Fast_No_Fun_Wpf.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="NoLightNoFunWPF" Height="400" Width="600">
+    <DockPanel>
+        <Button x:Name="StartButton"
+            Content="Démarrer écoute"
+            DockPanel.Dock="Top"
+            Click="StartButton_Click"
+            Margin="5"/>
+        <TextBox x:Name="LogBox"
+             IsReadOnly="True"
+             AcceptsReturn="True"
+             VerticalScrollBarVisibility="Auto"
+             Margin="5"/>
+    </DockPanel>
+</Window>
