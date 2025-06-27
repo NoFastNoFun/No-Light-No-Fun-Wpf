@@ -7,8 +7,7 @@ using Core.Messages;
 using Services.Config;
 using System.Windows.Input;
 
-namespace No_Fast_No_Fun_Wpf.ViewsModel
-{
+namespace No_Fast_No_Fun_Wpf.ViewModels {
     public class ReceiverConfigPanelViewModel : BaseViewModel {
         readonly SettingsService _settings;
 

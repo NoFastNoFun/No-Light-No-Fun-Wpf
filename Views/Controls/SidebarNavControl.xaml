@@ -1,0 +1,9 @@
+﻿<UserControl x:Class="No_Fast_No_Fun_Wpf.Views.Controls.SidebarNavControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <ListBox x:Name="PART_ListBox"
+           ItemsSource="{Binding ItemsSource, RelativeSource={RelativeSource AncestorType=UserControl}}"
+           SelectedItem="{Binding SelectedItem, RelativeSource={RelativeSource AncestorType=UserControl}, Mode=TwoWay}"
+           Margin="5"/>
+</UserControl>
