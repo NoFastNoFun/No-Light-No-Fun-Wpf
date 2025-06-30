@@ -8,66 +8,42 @@
              d:DesignWidth="600" d:DesignHeight="400">
 
     <UserControl.Resources>
-        <!-- On récupère le converter depuis App.xaml ou on peut le redéclarer ici -->
         <conv:RangeConverter x:Key="RangeConverter"/>
     </UserControl.Resources>
 
     <DockPanel Margin="10">
-
-        <!-- Barre d'outils -->
         <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,10">
             <Button Content="Load..." Command="{Binding LoadConfigCommand}" Margin="0,0,5,0"/>
             <Button Content="Save"   Command="{Binding SaveConfigCommand}" Margin="0,0,5,0"/>
-            <Button Content="Add"    Command="{Binding AddItemCommand}"/>
+            <Button Content="Add"    Command="{Binding AddItemCommand}" Margin="0,0,5,0"/>
+            <Button Content="Delete" Command="{Binding DeleteItemCommand}" />
         </StackPanel>
 
-        <!-- Grille d'édition -->
         <DataGrid ItemsSource="{Binding ConfigItems}"
+              SelectedItem="{Binding SelectedConfigItem, Mode=TwoWay}"
               AutoGenerateColumns="False"
               CanUserAddRows="False"
               Margin="0,0,0,10">
+
             <DataGrid.Columns>
-
-                <!-- Colonne Entités : start – end -->
-                <DataGridTemplateColumn Header="Entités" Width="2*">
-                    <DataGridTemplateColumn.CellTemplate>
-                        <DataTemplate>
-                            <TextBlock>
-                                <TextBlock.Text>
-                                    <MultiBinding Converter="{StaticResource RangeConverter}">
-                                        <Binding Path="StartEntityId"/>
-                                        <Binding Path="EndEntityId"/>
-                                    </MultiBinding>
-                                </TextBlock.Text>
-                            </TextBlock>
-                        </DataTemplate>
-                    </DataGridTemplateColumn.CellTemplate>
-                </DataGridTemplateColumn>
-
-                <!-- Colonne Univers : start – end -->
-                <DataGridTemplateColumn Header="Univers" Width="2*">
-                    <DataGridTemplateColumn.CellTemplate>
-                        <DataTemplate>
-                            <TextBlock>
-                                <TextBlock.Text>
-                                    <MultiBinding Converter="{StaticResource RangeConverter}">
-                                        <Binding Path="StartUniverse"/>
-                                        <Binding Path="EndUniverse"/>
-                                    </MultiBinding>
-                                </TextBlock.Text>
-                            </TextBlock>
-                        </DataTemplate>
-                    </DataGridTemplateColumn.CellTemplate>
-                </DataGridTemplateColumn>
-
-                <!-- Colonne IP Contrôleur -->
-                <DataGridTextColumn Header="Adresse IP" Width="*"
-                            Binding="{Binding ControllerIp, Mode=TwoWay}"/>
-
+                <DataGridTextColumn Header="Start Entity ID"
+                            Binding="{Binding StartEntityId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                            Width="*"/>
+                <DataGridTextColumn Header="End Entity ID"
+                            Binding="{Binding EndEntityId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                            Width="*"/>
+                <DataGridTextColumn Header="Start Universe"
+                            Binding="{Binding StartUniverse, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                            Width="*"/>
+                <DataGridTextColumn Header="End Universe"
+                            Binding="{Binding EndUniverse, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                            Width="*"/>
+                <DataGridTextColumn Header="Controller IP"
+                            Binding="{Binding ControllerIp, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                            Width="2*"/>
             </DataGrid.Columns>
         </DataGrid>
 
-        <!-- Aperçu JSON brut -->
         <TextBox Text="{Binding RawJson, Mode=TwoWay}"
              AcceptsReturn="True"
              VerticalScrollBarVisibility="Auto"
