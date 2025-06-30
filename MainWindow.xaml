@@ -5,16 +5,10 @@
         xmlns:controls="clr-namespace:No_Fast_No_Fun_Wpf.Views.Controls"
         Title="NoLightNoFunWPF" Height="600" Width="1000">
 
-    <!-- Lie le ViewModel principal -->
-    <Window.DataContext>
-        <vm:MainWindowViewModel/>
-    </Window.DataContext>
 
     <Grid>
         <Grid.ColumnDefinitions>
-            <!-- Colonne de navigation -->
             <ColumnDefinition Width="200"/>
-            <!-- Colonne de contenu dynamique -->
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
 

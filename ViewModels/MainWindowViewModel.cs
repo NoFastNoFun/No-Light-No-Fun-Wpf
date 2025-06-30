@@ -1,4 +1,6 @@
-﻿using Services.Config;
+﻿using No_Fast_No_Fun_Wpf.Services.Network;
+using Services.Config;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Windows.Input;
 
@@ -7,22 +9,40 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
         public ObservableCollection<string> Tabs {
             get;
         }
+
+        readonly UdpListenerService _listener;
+
+
+        private object _currentViewModel;
         public object CurrentViewModel {
-            get; private set;
+            get => _currentViewModel;
+            private set => SetProperty(ref _currentViewModel, value);
         }
+
         public ICommand ChangeTabCommand {
             get;
         }
 
         readonly Dictionary<string, BaseViewModel> _panelViewModels;
 
-        public MainWindowViewModel() {
+        public MainWindowViewModel(UdpListenerService listener) {
             var settings = new SettingsService();
+            _listener = listener;
+
+            _listener.OnConfigPacket += pkt => {
+                // Logique de traitement des paquets de configuration
+            };
+            _listener.OnUpdatePacket += pkt => {
+                // Logique de traitement des paquets de mise à jour
+            };
+            _listener.OnRemotePacket += pkt => {
+                // Logique de traitement des paquets de contrôle à distance
+            };
 
             _panelViewModels = new Dictionary<string, BaseViewModel>
             {
                 { "Configuration", new ConfigEditorViewModel() },
-                { "Monitoring",    new MonitoringDashboardViewModel() },
+                { "Monitoring",    new MonitoringDashboardViewModel(_listener) },
                 { "PatchMap",      new PatchMapManagerViewModel() },
                 { "Receivers",     new ReceiverConfigPanelViewModel(settings) },
                 { "Streams",       new StreamManagerViewModel() },
@@ -34,7 +54,7 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
 
             ChangeTabCommand = new RelayCommand(param => {
                 if (param is string tab && _panelViewModels.ContainsKey(tab))
-                    SetProperty(ref CurrentViewModel, _panelViewModels[tab]);
+                    CurrentViewModel = _panelViewModels[tab];
             });
         }
     }
