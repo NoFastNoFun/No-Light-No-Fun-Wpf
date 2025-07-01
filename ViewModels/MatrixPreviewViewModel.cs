@@ -1,38 +1,53 @@
 ﻿using System.Collections.ObjectModel;
+using System.Linq;
 using System.Windows.Media;
 using No_Fast_No_Fun_Wpf.Services.Network;
 
-namespace No_Fast_No_Fun_Wpf.ViewModels
-{
+namespace No_Fast_No_Fun_Wpf.ViewModels {
     public class MatrixPreviewViewModel : BaseViewModel {
+        public int PreviewWidth {
+            get;
+        }
+        public int PreviewHeight {
+            get;
+        }
+
         public ObservableCollection<PixelViewModel> Pixels {
             get;
         }
-        readonly UdpListenerService _listener;
-        readonly int _width;
-        readonly int _height;
 
         public MatrixPreviewViewModel(UdpListenerService listener, int width, int height) {
-            _listener = listener;
-            _width = width;
-            _height = height;
-            Pixels = new ObservableCollection<PixelViewModel>();
+            PreviewWidth = width;
+            PreviewHeight = height;
 
-            for (int y = 0; y < _height; y++)
-                for (int x = 0; x < _width; x++)
-                    Pixels.Add(new PixelViewModel { X = x, Y = y, CurrentColor = Colors.Black });
+            // Initialise la grille de pixels
+            Pixels = new ObservableCollection<PixelViewModel>(
+                Enumerable.Range(0, height)
+                          .SelectMany(y =>
+                              Enumerable.Range(0, width)
+                                        .Select(x => new PixelViewModel(x, y, Colors.Black))
+                          )
+            );
 
-            _listener.OnUpdatePacket += packet => {
-                
-                foreach (var px in packet.Pixels) {
-                    int id = px.Entity; 
-                    int idx = id;       
+            listener.OnUpdatePacket += msg => {
+                foreach (var px in msg.Pixels) {
+                    int idx = ComputeIndex(px.Entity);
                     if (idx >= 0 && idx < Pixels.Count) {
-                        var vm = Pixels[idx];
-                        vm.CurrentColor = Color.FromRgb(px.R, px.G, px.B);
+                        // applique la nouvelle couleur
+                        Pixels[idx].CurrentColor = Color.FromRgb(px.R, px.G, px.B);
                     }
                 }
             };
+        }
+
+        // map simple : entity 1 → (0,0), 2→(1,0), etc.
+        int ComputeIndex(int entity) {
+            int zeroBased = entity - 1;
+            int x = zeroBased % PreviewWidth;
+            int y = zeroBased / PreviewWidth;
+            if (x < 0 || x >= PreviewWidth || y < 0 || y >= PreviewHeight)
+                return -1;
+            return y * PreviewWidth + x;
         }
     }
 }
