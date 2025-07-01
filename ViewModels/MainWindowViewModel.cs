@@ -41,8 +41,8 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
 
             // Services de settings
             var settingsService = new SettingsService();
-            var receiversVm = new ReceiverConfigPanelViewModel(settingsService);
-            var routersVm = new ReceiverConfigPanelViewModel(settingsService);
+            var receiversVm = new ReceiverConfigPanelViewModel();
+            var routersVm = new ReceiverConfigPanelViewModel();
 
             // Dictionnaire d’onglets
             _panelViewModels = new Dictionary<string, BaseViewModel>
