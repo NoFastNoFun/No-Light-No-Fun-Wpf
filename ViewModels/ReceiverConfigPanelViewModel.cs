@@ -48,7 +48,12 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
 
             LoadCommand = new RelayCommand(_ => Load());
             SaveCommand = new RelayCommand(_ => Save());
-            AddRouterCmd = new RelayCommand(_ => Routers.Add(new DmxRouterSettings()));
+            AddRouterCmd = new RelayCommand(_ => {
+                var router = new DmxRouterSettings();
+                Routers.Add(router);
+                SelectedRouter = router;  
+            });
+
             DelRouterCmd = new RelayCommand(_ => {
                 if (SelectedRouter != null)
                     Routers.Remove(SelectedRouter);
