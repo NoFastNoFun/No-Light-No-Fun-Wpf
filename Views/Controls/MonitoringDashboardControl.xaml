@@ -3,25 +3,44 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-             mc:Ignorable="d">
+             mc:Ignorable="d"
+             d:DesignWidth="400" d:DesignHeight="300">
 
     <DockPanel Margin="10">
         <!-- Boutons Start/Stop et compteurs -->
-        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,0,10">
-            <Button Content="Start" Command="{Binding StartCommand}" Margin="0,0,10,0"/>
-            <Button Content="Stop"  Command="{Binding StopCommand}"  Margin="0,0,20,0"/>
+        <StackPanel DockPanel.Dock="Top"
+                Orientation="Horizontal"
+                VerticalAlignment="Center"
+                Margin="0,0,0,10">
+            <Button Content="Start"
+              Command="{Binding StartCommand, Mode=OneWay}"
+              Margin="0,0,10,0"/>
+            <Button Content="Stop"
+              Command="{Binding StopCommand, Mode=OneWay}"
+              Margin="0,0,20,0"/>
 
-            <TextBlock Text="CFG/s :" FontWeight="Bold"/>
-            <TextBlock Text="{Binding ConfigPerSecond}" Width="40" Margin="5,0"/>
+            <TextBlock Text="CFG/s :"
+                 FontWeight="Bold"/>
+            <TextBlock Text="{Binding ConfigPerSecond, Mode=OneWay}"
+                 Width="40"
+                 Margin="5,0"/>
 
-            <TextBlock Text="UPD/s :" FontWeight="Bold" Margin="20,0,0,0"/>
-            <TextBlock Text="{Binding UpdatesPerSecond}" Width="40" Margin="5,0"/>
+            <TextBlock Text="UPD/s :"
+                 FontWeight="Bold"
+                 Margin="20,0,0,0"/>
+            <TextBlock Text="{Binding UpdatesPerSecond, Mode=OneWay}"
+                 Width="40"
+                 Margin="5,0"/>
 
-            <TextBlock Text="REM/s :" FontWeight="Bold" Margin="20,0,0,0"/>
-            <TextBlock Text="{Binding RemotePerSecond}"  Width="40" Margin="5,0"/>
+            <TextBlock Text="REM/s :"
+                 FontWeight="Bold"
+                 Margin="20,0,0,0"/>
+            <TextBlock Text="{Binding RemotePerSecond, Mode=OneWay}"
+                 Width="40"
+                 Margin="5,0"/>
         </StackPanel>
 
         <!-- Log scrolling -->
-        <ListBox ItemsSource="{Binding Logs}" />
+        <ListBox ItemsSource="{Binding Logs, Mode=OneWay}" />
     </DockPanel>
 </UserControl>

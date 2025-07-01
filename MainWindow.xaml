@@ -41,7 +41,9 @@
         <DataTemplate DataType="{x:Type vm:ReceiverConfigPanelViewModel}">
             <controls:ReceiverConfigPanelControl/>
         </DataTemplate>
-        <!-- Ajoute ici les autres DataTemplate si besoin -->
+        <DataTemplate DataType="{x:Type vm:DmxMonitorViewModel}">
+            <controls:DmxMonitorControl/>
+        </DataTemplate>
     </Window.Resources>
 
 </Window>
