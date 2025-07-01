@@ -1,9 +1,7 @@
-﻿using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Linq;
+﻿using System.Collections.ObjectModel;
 using System.Windows.Input;
+using Core.Messages;
 using No_Fast_No_Fun_Wpf.Services.Network;
-using No_Fast_No_Fun_Wpf.Core.Messages;
 using Services.Config;
 using Services.Matrix;
 
