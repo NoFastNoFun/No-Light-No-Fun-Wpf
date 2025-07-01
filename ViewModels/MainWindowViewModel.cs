@@ -40,29 +40,28 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
             // 2) Construit le dictionnaire d’onglets
             _panelViewModels = new Dictionary<string, BaseViewModel>
             {
-            { "Configuration",   new ConfigEditorViewModel() },
-            { "Monitoring",      new MonitoringDashboardViewModel(_listener) },
-            { "PatchMap",        new PatchMapManagerViewModel() },
-            { "Receivers",       new ReceiverConfigPanelViewModel(new SettingsService()) },
-            { "Streams",         new StreamManagerViewModel() },
-            { "Settings",        new SystemSettingsPanelViewModel() },
-            { "DMX Monitor",     new DmxMonitorViewModel(_artNetController) },
-            { "Preview",         Preview }
-        };
+                { "Configuration", new ConfigEditorViewModel() },
+                { "Monitoring",    new MonitoringDashboardViewModel(_listener) },
+                { "PatchMap",      new PatchMapManagerViewModel() },
+                { "Receivers",     new ReceiverConfigPanelViewModel() },
+                { "Streams",       new StreamManagerViewModel() },
+                { "Settings",      new SystemSettingsPanelViewModel() },
+                { "DMX Monitor",   new DmxMonitorViewModel(_artNetController) },
+                { "Preview",       Preview },
+                { "DMX Routers",   new ReceiverConfigPanelViewModel() }
+            };
 
-            // 3) Initialise les onglets
+            // 3) Initialise la collection d’onglets à partir des clés du dictionnaire
             Tabs = new ObservableCollection<string>(_panelViewModels.Keys);
 
             // 4) Onglet courant par défaut
             CurrentViewModel = _panelViewModels[Tabs[0]];
 
             // 5) Commande de changement d’onglet
-            ChangeTabCommand = new RelayCommand(param =>
-            {
+            ChangeTabCommand = new RelayCommand(param => {
                 if (param is string tab && _panelViewModels.TryGetValue(tab, out var vm))
                     CurrentViewModel = vm;
             });
         }
     }
-
 }

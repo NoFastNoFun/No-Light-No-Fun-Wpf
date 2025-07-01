@@ -1,21 +1,58 @@
 ﻿<UserControl x:Class="No_Fast_No_Fun_Wpf.Views.Controls.ReceiverConfigPanelControl"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    <Grid Margin="10">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition/>
-        </Grid.RowDefinitions>
-        <StackPanel Orientation="Horizontal" Grid.Row="0" Margin="0,0,0,5">
-            <TextBlock VerticalAlignment="Center" Text="Port : "/>
-            <TextBox Width="80" Text="{Binding Settings.Port, UpdateSourceTrigger=PropertyChanged}"/>
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:converter="clr-namespace:No_Fast_No_Fun_Wpf.Converters">
+    <DockPanel Margin="10">
+        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,10">
+            <Button Content="Load"  Command="{Binding LoadCommand}"  Margin="0,0,5,0"/>
+            <Button Content="Save"  Command="{Binding SaveCommand}"  Margin="0,0,5,0"/>
+            <Button Content="Add Router" Command="{Binding AddRouterCmd}" Margin="0,0,5,0"/>
+            <Button Content="Delete Router" Command="{Binding DelRouterCmd}"/>
         </StackPanel>
-        <StackPanel Orientation="Horizontal" Grid.Row="1" Margin="0,0,0,5">
-            <TextBlock VerticalAlignment="Center" Text="Univers : "/>
-            <TextBox Width="80" Text="{Binding Settings.Universe, UpdateSourceTrigger=PropertyChanged}"/>
-        </StackPanel>
-        <Button Grid.Row="2" Content="Enregistrer" 
-            Command="{Binding SaveCommand}" HorizontalAlignment="Left" Width="100"/>
-    </Grid>
+
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="200"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Liste des Routeurs -->
+            <ListBox ItemsSource="{Binding Routers}"
+               SelectedItem="{Binding SelectedRouter}"
+               DisplayMemberPath="Ip"
+               Grid.Column="0"/>
+
+            <!-- Détails du routeur sélectionné -->
+            <StackPanel Grid.Column="1" Margin="10">
+                <TextBlock Text="IP:"/>
+                <TextBox Text="{Binding SelectedRouter.Ip, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+
+                <TextBlock Text="Port:" Margin="0,10,0,0"/>
+                <TextBox Text="{Binding SelectedRouter.Port, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+
+                <TextBlock Text="Universe Ranges:" Margin="0,10,0,0"/>
+                <StackPanel Orientation="Horizontal">
+                    <Button Content="Add Range" Command="{Binding AddRangeCmd}" Margin="0,0,5,0"/>
+                    <!-- Pour DeleteRange tu devras binder un SelectedRange dans le grid suivant -->
+                </StackPanel>
+
+                <DataGrid ItemsSource="{Binding SelectedRouter.Universes}"
+                  AutoGenerateColumns="False"
+                  CanUserAddRows="False"
+                  Height="150"
+                  Margin="0,5,0,0">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Entités Start"
+                                Binding="{Binding EntityIdStart, Mode=TwoWay}"/>
+                        <DataGridTextColumn Header="Entités End"
+                                Binding="{Binding EntityIdEnd, Mode=TwoWay}"/>
+                        <DataGridTextColumn Header="Uni Start"
+                                Binding="{Binding UniverseStart, Mode=TwoWay}"/>
+                        <DataGridTextColumn Header="Uni End"
+                                Binding="{Binding UniverseEnd, Mode=TwoWay}"/>
+                    </DataGrid.Columns>
+                </DataGrid>
+            </StackPanel>
+        </Grid>
+    </DockPanel>
 </UserControl>
