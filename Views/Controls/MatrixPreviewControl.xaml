@@ -1,0 +1,20 @@
+﻿<UserControl x:Class="No_Fast_No_Fun_Wpf.Views.Controls.MatrixPreviewControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <ScrollViewer>
+        <ItemsControl ItemsSource="{Binding Pixels, Mode=OneWay}">
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <UniformGrid Columns="{Binding PreviewWidth}" 
+                       Rows="{Binding PreviewHeight}"/>
+                </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <Rectangle Width="10" Height="10" Margin="1"
+                     Fill="{Binding CurrentColor, Converter={StaticResource ColorToBrushConverter}}"/>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+    </ScrollViewer>
+</UserControl>
