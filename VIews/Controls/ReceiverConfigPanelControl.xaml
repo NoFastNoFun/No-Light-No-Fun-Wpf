@@ -58,22 +58,21 @@
                 </StackPanel>
 
                 <!-- Grille des plages -->
-                <DataGrid ItemsSource="{Binding SelectedRouter.Universes}"
-                          SelectedItem="{Binding SelectedRange, Mode=TwoWay}"
-                          AutoGenerateColumns="False"
-                          CanUserAddRows="False"
-                          Height="150">
+                <DataGrid ItemsSource="{Binding Universes}"
+                        SelectedItem="{Binding SelectedRange, Mode=TwoWay}"
+                        AutoGenerateColumns="False" CanUserAddRows="False">
                     <DataGrid.Columns>
-                        <DataGridTextColumn Header="Entités Start"
-                                            Binding="{Binding EntityIdStart, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
-                        <DataGridTextColumn Header="Entités End"
-                                            Binding="{Binding EntityIdEnd, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
-                        <DataGridTextColumn Header="Uni Start"
-                                            Binding="{Binding UniverseStart, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
-                        <DataGridTextColumn Header="Uni End"
-                                            Binding="{Binding UniverseEnd, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                            <DataGridTextColumn Header="Entités Start"
+                                Binding="{Binding EntityIdStart, Mode=TwoWay}"/>
+                            <DataGridTextColumn Header="Entités End"
+                                Binding="{Binding EntityIdEnd, Mode=TwoWay}"/>
+                            <DataGridTextColumn Header="Uni Start"
+                                Binding="{Binding UniverseStart, Mode=TwoWay}"/>
+                            <DataGridTextColumn Header="Uni End"
+                                Binding="{Binding UniverseEnd, Mode=TwoWay}"/>
                     </DataGrid.Columns>
                 </DataGrid>
+
             </StackPanel>
         </Grid>
     </DockPanel>

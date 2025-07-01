@@ -37,8 +37,8 @@ namespace No_Fast_No_Fun_Wpf {
                     // Remplit les buffers d’après les entités
                     foreach (var px in packet.Pixels) {
                         foreach (var map in router.Universes) {
-                            if (px.Entity >= map.EntityIdStart && px.Entity <= map.EntityIdEnd) {
-                                int localIndex = px.Entity - map.EntityIdStart;
+                            if (px.Entity >= map.EntityStart && px.Entity <= map.EntityEnd) {
+                                int localIndex = px.Entity - map.EntityStart;
                                 byte uni = (byte)(map.UniverseStart + (localIndex / 170));
                                 int channel = (localIndex % 170) * 3;
 

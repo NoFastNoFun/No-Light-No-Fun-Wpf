@@ -73,9 +73,10 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
                                 .Select(vm => vm.ToModel());
 
             var routingService = new DmxRoutingService(
-                routersVm.Routers,
+                routersVm.Routers.Select(vm => vm.ToModel()),
                 patchEntries,
                 _artNetController);
+
 
             _listener.OnUpdatePacket += (UpdateMessage pkt)
                 => routingService.RouteUpdate(pkt);

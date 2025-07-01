@@ -1,35 +1,36 @@
 ﻿using System.Collections.ObjectModel;
+using System.Linq;
 using System.Windows.Input;
 using Core.Dtos;
-using Core.Models;
 using Services.Config;
 
 namespace No_Fast_No_Fun_Wpf.ViewModels {
     public class ReceiverConfigPanelViewModel : BaseViewModel {
         readonly IJsonFileService<DmxSettingsDto> _service;
 
-        public ObservableCollection<DmxRouterSettings> Routers {
+        public ObservableCollection<DmxRouterSettingsViewModel> Routers {
             get;
         }
 
-        // Sélection d’un routeur
-        DmxRouterSettings _selectedRouter;
-        public DmxRouterSettings SelectedRouter {
+        public ObservableCollection<UniverseMapViewModel> Universes {
+            get;
+        }
+
+        DmxRouterSettingsViewModel? _selectedRouter;
+        public DmxRouterSettingsViewModel? SelectedRouter {
             get => _selectedRouter;
             set {
                 if (SetProperty(ref _selectedRouter, value)) {
-                    // réévalue la disponibilité des commandes
                     (AddRangeCmd as RelayCommand)?.RaiseCanExecuteChanged();
                     (DelRouterCmd as RelayCommand)?.RaiseCanExecuteChanged();
-                    // on désélectionne aussi la range courante
                     SelectedRange = null;
+                    ReloadUniverses();
                 }
             }
         }
 
-        // Sélection d’une plage DMX
-        UniverseMap _selectedRange;
-        public UniverseMap SelectedRange {
+        UniverseMapViewModel? _selectedRange;
+        public UniverseMapViewModel? SelectedRange {
             get => _selectedRange;
             set {
                 if (SetProperty(ref _selectedRange, value)) {
@@ -38,7 +39,6 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
             }
         }
 
-        // Les commandes
         public ICommand LoadCommand {
             get;
         }
@@ -60,40 +60,44 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
 
         public ReceiverConfigPanelViewModel() {
             _service = new JsonFileConfigService<DmxSettingsDto>("dmxsettings.json");
-            Routers = new ObservableCollection<DmxRouterSettings>();
+            Routers = new ObservableCollection<DmxRouterSettingsViewModel>();
+            Universes = new ObservableCollection<UniverseMapViewModel>();
 
-            // Charger / Sauver
             LoadCommand = new RelayCommand(_ => Load());
             SaveCommand = new RelayCommand(_ => Save());
 
-            // Ajouter / supprimer un router
             AddRouterCmd = new RelayCommand(_ => {
-                var router = new DmxRouterSettings();
-                Routers.Add(router);
-                SelectedRouter = router;
+                var routerVm = new DmxRouterSettingsViewModel(new DmxRouterSettingsDto());
+                Routers.Add(routerVm);
+                SelectedRouter = routerVm;
             });
+
+
             DelRouterCmd = new RelayCommand(_ => {
                 if (SelectedRouter != null) {
                     Routers.Remove(SelectedRouter);
-                    SelectedRouter = null;
+                    SelectedRouter = Routers.FirstOrDefault();
                 }
             }, _ => SelectedRouter != null);
 
-            // Ajouter / supprimer une range sur le router sélectionné
             AddRangeCmd = new RelayCommand(_ => {
-                var range = new UniverseMap();
-                SelectedRouter.Universes.Add(range);
-                SelectedRange = range;
+                if (SelectedRouter != null) {
+                    var model = new Core.Models.UniverseMap();
+                    var vm = new UniverseMapViewModel(model);
+                    SelectedRouter.Universes.Add(vm);
+                    Universes.Add(vm);
+                    SelectedRange = vm;
+                }
             }, _ => SelectedRouter != null);
 
             DelRangeCmd = new RelayCommand(_ => {
-                if (SelectedRange != null) {
+                if (SelectedRouter != null && SelectedRange != null) {
                     SelectedRouter.Universes.Remove(SelectedRange);
+                    Universes.Remove(SelectedRange);
                     SelectedRange = null;
                 }
             }, _ => SelectedRange != null);
 
-            // Chargement initial
             Load();
         }
 
@@ -101,15 +105,24 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
             var dto = _service.Load();
             Routers.Clear();
             foreach (var r in dto.Routers)
-                Routers.Add(r);
+                Routers.Add(new DmxRouterSettingsViewModel(r));
             SelectedRouter = Routers.FirstOrDefault();
         }
 
         void Save() {
             var dto = new DmxSettingsDto {
-                Routers = Routers.ToList()
+                Routers = Routers.Select(r => r.ToDto()).ToList()
             };
             _service.Save(dto);
+        }
+
+        void ReloadUniverses() {
+            Universes.Clear();
+            if (SelectedRouter == null)
+                return;
+
+            foreach (var vm in SelectedRouter.Universes)
+                Universes.Add(vm);
         }
     }
 }
