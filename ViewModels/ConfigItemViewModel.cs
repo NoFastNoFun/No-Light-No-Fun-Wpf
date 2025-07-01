@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel;
 using System.Runtime.CompilerServices;
-using No_Fast_No_Fun_Wpf.Core.Models;
+using Core.Models;
 
 namespace No_Fast_No_Fun_Wpf.ViewModels {
     public class ConfigItemViewModel : INotifyPropertyChanged {

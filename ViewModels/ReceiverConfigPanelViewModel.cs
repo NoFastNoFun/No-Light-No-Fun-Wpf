@@ -13,7 +13,12 @@ using System.Collections.ObjectModel;
 namespace No_Fast_No_Fun_Wpf.ViewModels {
     public class ReceiverConfigPanelViewModel : BaseViewModel {
         readonly IJsonFileService<DmxSettingsDto> _service;
-
+        UniverseMap _selectedRange;
+        public UniverseMap SelectedRange {
+            get => _selectedRange;
+            set => SetProperty(ref _selectedRange, value);
+        }
+       
         public ObservableCollection<DmxRouterSettings> Routers {
             get;
         }
@@ -54,14 +59,19 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
                 SelectedRouter = router;  
             });
 
-            DelRouterCmd = new RelayCommand(_ => {
-                if (SelectedRouter != null)
-                    Routers.Remove(SelectedRouter);
+            AddRangeCmd = new RelayCommand(_ =>
+            {
+                var range = new UniverseMap();
+                SelectedRouter.Universes.Add(range);
+                SelectedRange = range;    // on sélectionne tout de suite
             }, _ => SelectedRouter != null);
 
-            AddRangeCmd = new RelayCommand(_ => {
-                SelectedRouter?.Universes.Add(new UniverseMap());
-            }, _ => SelectedRouter != null);
+            DelRangeCmd = new RelayCommand(_ =>
+            {
+                SelectedRouter.Universes.Remove(SelectedRange);
+                SelectedRange = null;
+            }, _ => SelectedRange != null);
+
 
             DelRangeCmd = new RelayCommand(_ => {
                 // il te faudra stocker un SelectedRange, jette un œil ci-dessous

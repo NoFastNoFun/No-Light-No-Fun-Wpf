@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO.Ports;
-using No_Fast_No_Fun_Wpf.Core.Models;
+using Core.Models;
 
 
 namespace No_Fast_No_Fun_Wpf.Services.Matrix {

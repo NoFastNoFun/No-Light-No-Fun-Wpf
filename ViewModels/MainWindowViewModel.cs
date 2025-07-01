@@ -1,9 +1,11 @@
-﻿using No_Fast_No_Fun_Wpf.Services.Network;
+﻿using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Linq;
+using System.Windows.Input;
+using No_Fast_No_Fun_Wpf.Services.Network;
+using No_Fast_No_Fun_Wpf.Core.Messages;
 using Services.Config;
 using Services.Matrix;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Windows.Input;
 
 namespace No_Fast_No_Fun_Wpf.ViewModels {
     public class MainWindowViewModel : BaseViewModel {
@@ -30,38 +32,55 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
 
         readonly Dictionary<string, BaseViewModel> _panelViewModels;
 
-        public MainWindowViewModel(UdpListenerService listener, ArtNetDmxController artNetController) {
+        public MainWindowViewModel(
+            UdpListenerService listener,
+            ArtNetDmxController artNetController) {
             _listener = listener;
             _artNetController = artNetController;
 
-            // 1) Crée UNE fois la preview, ici en 128×128
+            // Preview
             Preview = new MatrixPreviewViewModel(_listener, width: 128, height: 128);
 
-            // 2) Construit le dictionnaire d’onglets
+            // Services de settings
+            var settingsService = new SettingsService();
+            var receiversVm = new ReceiverConfigPanelViewModel(settingsService);
+            var routersVm = new ReceiverConfigPanelViewModel(settingsService);
+
+            // Dictionnaire d’onglets
             _panelViewModels = new Dictionary<string, BaseViewModel>
             {
                 { "Configuration", new ConfigEditorViewModel() },
                 { "Monitoring",    new MonitoringDashboardViewModel(_listener) },
                 { "PatchMap",      new PatchMapManagerViewModel() },
-                { "Receivers",     new ReceiverConfigPanelViewModel() },
+                { "Receivers",     receiversVm },
                 { "Streams",       new StreamManagerViewModel() },
                 { "Settings",      new SystemSettingsPanelViewModel() },
                 { "DMX Monitor",   new DmxMonitorViewModel(_artNetController) },
                 { "Preview",       Preview },
-                { "DMX Routers",   new ReceiverConfigPanelViewModel() }
+                { "DMX Routers",   routersVm }
             };
 
-            // 3) Initialise la collection d’onglets à partir des clés du dictionnaire
+            // Initialisation des onglets
             Tabs = new ObservableCollection<string>(_panelViewModels.Keys);
-
-            // 4) Onglet courant par défaut
             CurrentViewModel = _panelViewModels[Tabs[0]];
 
-            // 5) Commande de changement d’onglet
             ChangeTabCommand = new RelayCommand(param => {
                 if (param is string tab && _panelViewModels.TryGetValue(tab, out var vm))
                     CurrentViewModel = vm;
             });
+
+            // Routage eHub → DMX
+            var patchEntries = ((PatchMapManagerViewModel)_panelViewModels["PatchMap"])
+                                .Entries
+                                .Select(vm => vm.ToModel());
+
+            var routingService = new DmxRoutingService(
+                routersVm.Routers,
+                patchEntries,
+                _artNetController);
+
+            _listener.OnUpdatePacket += (UpdateMessage pkt)
+                => routingService.RouteUpdate(pkt);
         }
     }
 }
