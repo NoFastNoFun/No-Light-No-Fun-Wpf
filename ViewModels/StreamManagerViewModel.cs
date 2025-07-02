@@ -10,60 +10,52 @@ using System.Windows.Input;
 namespace No_Fast_No_Fun_Wpf.ViewModels
 {
     public class StreamManagerViewModel : BaseViewModel {
-        public ObservableCollection<StreamItem> Streams {
+        public ObservableCollection<StreamEntry> Streams {
             get;
         }
 
-        StreamItem? _selectedStream;
-        public StreamItem? SelectedStream {
+        public ICommand AddStreamCommand {
+            get;
+        }
+        public ICommand RemoveStreamCommand {
+            get;
+        }
+        public ICommand ToggleStreamCommand {
+            get;
+        }
+
+        private StreamEntry _selectedStream;
+        public StreamEntry SelectedStream {
             get => _selectedStream;
-            set {
-                if (SetProperty(ref _selectedStream, value)) {
-                    (RemoveStreamCmd as RelayCommand)?.RaiseCanExecuteChanged();
-                    (ToggleStreamCmd as RelayCommand)?.RaiseCanExecuteChanged();
-                }
-            }
-        }
-
-        public ICommand AddStreamCmd {
-            get;
-        }
-        public ICommand RemoveStreamCmd {
-            get;
-        }
-        public ICommand ToggleStreamCmd {
-            get;
+            set => SetProperty(ref _selectedStream, value);
         }
 
         public StreamManagerViewModel() {
-            Streams = new ObservableCollection<StreamItem>();
-
-            AddStreamCmd = new RelayCommand(_ => AddStream());
-            RemoveStreamCmd = new RelayCommand(_ => RemoveStream(), _ => SelectedStream != null);
-            ToggleStreamCmd = new RelayCommand(_ => ToggleStream(), _ => SelectedStream != null);
-        }
-
-        void AddStream() {
-            var stream = new StreamItem {
-                Name = $"Flux {Streams.Count + 1}",
-                Universe = 0,
-                IsActive = false
+            Streams = new ObservableCollection<StreamEntry>
+            {
+                new StreamEntry { Name = "Cam Entrée", Url = "rtsp://192.168.1.10/stream", IsActive = false },
+                new StreamEntry { Name = "Cam Scene", Url = "rtsp://192.168.1.11/stream", IsActive = true }
             };
-            Streams.Add(stream);
-            SelectedStream = stream;
+
+            AddStreamCommand = new RelayCommand(_ => AddStream());
+            RemoveStreamCommand = new RelayCommand(_ => RemoveStream(), _ => SelectedStream != null);
+            ToggleStreamCommand = new RelayCommand(_ => ToggleStream(), _ => SelectedStream != null);
         }
 
-        void RemoveStream() {
-            if (SelectedStream != null) {
+        private void AddStream() {
+            var newStream = new StreamEntry { Name = "New Stream", Url = "", IsActive = false };
+            Streams.Add(newStream);
+            SelectedStream = newStream;
+        }
+
+        private void RemoveStream() {
+            if (SelectedStream != null)
                 Streams.Remove(SelectedStream);
-                SelectedStream = null;
-            }
         }
 
-        void ToggleStream() {
+        private void ToggleStream() {
             if (SelectedStream != null)
                 SelectedStream.IsActive = !SelectedStream.IsActive;
-            // Notify UI if needed (StreamItem pourrait implémenter INotifyPropertyChanged si modifié dynamiquement)
         }
     }
 }
