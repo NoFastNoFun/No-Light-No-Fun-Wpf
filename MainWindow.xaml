@@ -47,6 +47,9 @@
         <DataTemplate DataType="{x:Type vm:MatrixPreviewViewModel}">
             <controls:MatrixPreviewControl/>
         </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:StreamManagerViewModel}">
+            <controls:StreamManagerControl/>
+        </DataTemplate>
     </Window.Resources>
 
 </Window>
