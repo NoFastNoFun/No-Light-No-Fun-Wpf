@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Windows.Input;
 using Core.Dtos;
+using Core.Models;
 using Services.Config;
 
 namespace No_Fast_No_Fun_Wpf.ViewModels {
@@ -123,6 +124,12 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
 
             foreach (var vm in SelectedRouter.Universes)
                 Universes.Add(vm);
+        }
+        public void SetRouters(List<DmxRouterSettingsDto> routers) {
+            Routers.Clear();
+            foreach (var dto in routers)
+                Routers.Add(new DmxRouterSettingsViewModel(dto));
+            SelectedRouter = Routers.FirstOrDefault();
         }
     }
 }

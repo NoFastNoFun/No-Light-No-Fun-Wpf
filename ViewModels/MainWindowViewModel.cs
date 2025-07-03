@@ -45,21 +45,22 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
 
             // Services de settings
             var settingsService = new SettingsService();
-            var receiversVm = new ReceiverConfigPanelViewModel();
-            var routersVm = new ReceiverConfigPanelViewModel();
             var patchVm = new PatchMapManagerViewModel();
+            var routersVm = new ReceiverConfigPanelViewModel();
+            var settingsVm = new SystemSettingsPanelViewModel(_listener, patchVm, routersVm);
+
 
             // Dictionnaire d’onglets
             _panelViewModels = new Dictionary<string, BaseViewModel>
             {
+                { "Settings", settingsVm },
                 { "Configuration", new ConfigEditorViewModel() },
                 { "Monitoring",    new MonitoringDashboardViewModel(_listener) },
-                { "PatchMap",      new PatchMapManagerViewModel() },
-                { "Receivers",     receiversVm },
+                { "PatchMap", patchVm },
+                { "Receivers", routersVm },
                 { "Streams",       new StreamManagerViewModel() },
-                { "Settings",      new SystemSettingsPanelViewModel(_listener, patchVm, receiversVm) },
-                { "DMX Monitor",   new DmxMonitorViewModel(_artNetController) },
                 { "Preview",       Preview },
+                { "DMX Monitor",   new DmxMonitorViewModel(_artNetController) },
                 { "DMX Routers",   routersVm }
             };
 

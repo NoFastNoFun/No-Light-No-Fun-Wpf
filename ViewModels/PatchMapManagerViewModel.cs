@@ -153,6 +153,16 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
 
             File.WriteAllLines(dlg.FileName, lines);
         }
+        public void SetEntries(List<PatchMapEntryDto> entries) {
+            Entries.Clear();
+            foreach (var entry in entries)
+                Entries.Add(new PatchMapEntryViewModel(entry));
+        }
+
+        public List<PatchMapEntryDto> ToDto() {
+            return Entries.Select(e => e.ToModel()).ToList();
+        }
+
     }
 }
 

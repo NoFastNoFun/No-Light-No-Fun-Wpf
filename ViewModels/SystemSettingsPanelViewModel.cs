@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System.Collections.ObjectModel;
+using System.Linq;
 using System.Windows.Input;
 using Core.Dtos;
 using No_Fast_No_Fun_Wpf.Services.Network;
@@ -10,6 +11,9 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
         private readonly IJsonFileService<AppConfigDto> _jsonService;
         private readonly PatchMapManagerViewModel _patchVm;
         private readonly ReceiverConfigPanelViewModel _routerVm;
+        public ObservableCollection<string> Logs {
+            get;
+        }
 
         private int _selectedPort;
         public int SelectedPort {
@@ -43,6 +47,7 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
             _routerVm = routerVm;
             _jsonService = new JsonFileConfigService<AppConfigDto>("app_config.json");
 
+            Logs = new ObservableCollection<string>();
             ApplySettingsCommand = new RelayCommand(_ => ApplySettings());
             SaveConfigCommand = new RelayCommand(_ => Save());
             LoadConfigCommand = new RelayCommand(_ => Load());
@@ -51,33 +56,35 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
         }
 
         private void ApplySettings() {
+            if (SelectedPort < 1024 || SelectedPort > 65535) {
+                Logs.Add($"[{DateTime.Now:HH:mm:ss}] Erreur : Port invalide ({SelectedPort})");
+                return;
+            }
+
             _listener.Stop();
             _listener.UniverseToListen = SelectedUniverse;
             _listener.Start(SelectedPort);
+            Logs.Add($"[{DateTime.Now:HH:mm:ss}] Paramètres appliqués avec succès (Port : {SelectedPort}, Univers : {SelectedUniverse})");
         }
 
         private void Save() {
             var dto = new AppConfigDto {
-                PatchMap = _patchVm.Entries.Select(vm => vm.ToModel()).ToList(),
-                Routers = _routerVm.Routers.Select(vm => vm.ToDto()).ToList(),
                 ListeningPort = SelectedPort,
-                ListeningUniverse = SelectedUniverse
+                ListeningUniverse = SelectedUniverse,
+                PatchMap = _patchVm.Entries.Select(e => e.ToModel()).ToList(),
+                Routers = _routerVm.Routers.Select(r => r.ToDto()).ToList()
             };
             _jsonService.Save(dto);
+            Logs.Add($"[{DateTime.Now:HH:mm:ss}] Paramètres sauvegardés");
         }
 
         private void Load() {
             var dto = _jsonService.Load();
-            _patchVm.Entries.Clear();
-            foreach (var p in dto.PatchMap)
-                _patchVm.Entries.Add(new PatchMapEntryViewModel(p));
-
-            _routerVm.Routers.Clear();
-            foreach (var r in dto.Routers)
-                _routerVm.Routers.Add(new DmxRouterSettingsViewModel(r));
-
             SelectedPort = dto.ListeningPort;
             SelectedUniverse = dto.ListeningUniverse;
+            _patchVm.SetEntries(dto.PatchMap);
+            _routerVm.SetRouters(dto.Routers);
+            Logs.Add($"[{DateTime.Now:HH:mm:ss}] Paramètres chargés");
         }
     }
 }
