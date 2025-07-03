@@ -39,7 +39,12 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
         public ICommand StopCommand {
             get;
         }
+        public ICommand ClearLogsCommand {
+            get;
+        }
+        DateTime lastLogTime = DateTime.MinValue;
 
+     
         public MonitoringDashboardViewModel(UdpListenerService sharedListener) {
             Logs = new ObservableCollection<string>();
             _listener = sharedListener;
@@ -59,43 +64,52 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
 
             StartCommand = new RelayCommand(_ => Start());
             StopCommand = new RelayCommand(_ => Stop());
+            ClearLogsCommand = new RelayCommand(_ => Logs.Clear());
         }
 
         void Subscribe() {
             _listener.OnConfigPacket += pkt => {
                 _cfgCount++;
                 App.Current.Dispatcher.Invoke(() =>
-                    Logs.Add($"[{DateTime.Now:HH:mm:ss}] CFG ({pkt.Items.Count})"));
+                LogIfAllowed($"[{DateTime.Now:HH:mm:ss}] CFG ({pkt.Items.Count})"));
+
             };
 
             _listener.OnUpdatePacket += pkt => {
                 _updCount++;
                 App.Current.Dispatcher.Invoke(() =>
-                    Logs.Add($"[{DateTime.Now:HH:mm:ss}] UPD ({pkt.Pixels.Count})"));
+                    LogIfAllowed($"[{DateTime.Now:HH:mm:ss}] UPD pixels={pkt.Pixels.Count})"));
+
             };
 
             _listener.OnRemotePacket += pkt => {
                 _remCount++;
                 App.Current.Dispatcher.Invoke(() =>
-                    Logs.Add($"[{DateTime.Now:HH:mm:ss}] REM (cmd={(int)pkt.CommandCode})"));
+                    LogIfAllowed($"[{DateTime.Now:HH:mm:ss}] REM (cmd={(int)pkt.CommandCode})"));
+
             };
         }
 
         void Start() {
-            _listener.Start(8765);
             _statsTimer.Start();
             Logs.Add($"[{DateTime.Now:HH:mm:ss}] Monitoring démarré");
         }
 
         void Stop() {
             _statsTimer.Stop();
-            _listener.Stop();
             Logs.Add($"[{DateTime.Now:HH:mm:ss}] Monitoring arrêté");
         }
 
         public void Dispose() {
             _statsTimer?.Dispose();
-            _listener?.Stop();
         }
+        void LogIfAllowed(string message) {
+            var now = DateTime.Now;
+            if ((now - lastLogTime).TotalSeconds >= 1) {
+                lastLogTime = now;
+                App.Current.Dispatcher.Invoke(() => Logs.Add(message));
+            }
+        }
+
     }
 }

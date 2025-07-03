@@ -18,6 +18,8 @@
             <Button Content="Stop"
               Command="{Binding StopCommand, Mode=OneWay}"
               Margin="0,0,20,0"/>
+            <Button Content="Clear"
+              Command="{Binding ClearLogsCommand, Mode=OneWay }"/>
 
             <TextBlock Text="CFG/s :"
                  FontWeight="Bold"/>

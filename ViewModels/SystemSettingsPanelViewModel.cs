@@ -1,27 +1,22 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Windows.Input;
 using No_Fast_No_Fun_Wpf.Services.Network;
-using System.Windows.Input;
 
 namespace No_Fast_No_Fun_Wpf.ViewModels
 {
     public class SystemSettingsPanelViewModel : BaseViewModel {
         private readonly UdpListenerService _listener;
 
+        private int _selectedPort;
         public int SelectedPort {
             get => _selectedPort;
             set => SetProperty(ref _selectedPort, value);
         }
-        private int _selectedPort = 7777;
 
+        private int _selectedUniverse;
         public int SelectedUniverse {
             get => _selectedUniverse;
             set => SetProperty(ref _selectedUniverse, value);
         }
-        private int _selectedUniverse = 1;
 
         public ICommand ApplySettingsCommand {
             get;
@@ -29,8 +24,10 @@ namespace No_Fast_No_Fun_Wpf.ViewModels
 
         public SystemSettingsPanelViewModel(UdpListenerService listener) {
             _listener = listener;
-            SelectedPort = 7777;
-            SelectedUniverse = 1;
+
+            // Init with current values
+            SelectedPort = 8765;          
+            SelectedUniverse = 1;         
 
             ApplySettingsCommand = new RelayCommand(_ => ApplySettings());
         }
