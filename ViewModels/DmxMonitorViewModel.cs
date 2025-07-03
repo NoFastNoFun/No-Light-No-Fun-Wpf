@@ -25,6 +25,9 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
         public ICommand StopForwarding {
             get;
         }
+        public ICommand SendFakeFrameCommand {
+            get;
+        }
 
         public DmxMonitorViewModel(ArtNetDmxController artNet) {
             _artNet = artNet;
@@ -51,6 +54,13 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
                 _statsTimer.Stop();
                 Logs.Add($"[{DateTime.Now:HH:mm:ss}] Forwarding DMX stopped");
             });
+            SendFakeFrameCommand = new RelayCommand(_ => {
+                var fakeData = new byte[512];
+                for (int i = 0; i < 512; i++)
+                    fakeData[i] = (byte)(i % 256); // données test
+                _artNet.SendDmxFrame("127.0.0.1", 6454, 0, fakeData); // Envoi local
+            });
+
         }
 
         void OnFrameSent(string ip, byte universe, int length) {

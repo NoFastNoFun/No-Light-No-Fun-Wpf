@@ -13,7 +13,11 @@
         <TextBlock Text="Univers eHub" Margin="0,0,0,5"/>
         <TextBox Text="{Binding SelectedUniverse}" Width="100" Margin="0,0,0,10"/>
 
-        <Button Content="Appliquer" Command="{Binding ApplySettingsCommand}" Width="100"/>
+        <StackPanel Orientation="Horizontal" Margin="0,10,0,0" HorizontalAlignment="Left">
+            <Button Content="Charger" Command="{Binding LoadConfigCommand}" Width="80" Margin="0,0,10,0"/>
+            <Button Content="Sauvegarder" Command="{Binding SaveConfigCommand}" Width="100" Margin="0,0,10,0"/>
+            <Button Content="Appliquer" Command="{Binding ApplySettingsCommand}" Width="100"/>
+        </StackPanel>
     </StackPanel>
 
 </UserControl>
