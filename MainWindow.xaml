@@ -32,6 +32,9 @@
         <DataTemplate DataType="{x:Type vm:ConfigEditorViewModel}">
             <controls:ConfigEditorControl/>
         </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:SystemSettingsPanelViewModel}">
+            <controls:SystemSettingsPanelControl/>
+        </DataTemplate>
         <DataTemplate DataType="{x:Type vm:MonitoringDashboardViewModel}">
             <controls:MonitoringDashboardControl/>
         </DataTemplate>
@@ -50,6 +53,7 @@
         <DataTemplate DataType="{x:Type vm:StreamManagerViewModel}">
             <controls:StreamManagerControl/>
         </DataTemplate>
+
     </Window.Resources>
 
 </Window>

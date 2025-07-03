@@ -14,9 +14,12 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
         public MatrixPreviewViewModel Preview {
             get;
         }
-
-        readonly UdpListenerService _listener;
         readonly ArtNetDmxController _artNetController;
+        UdpListenerService _listener;
+
+
+        int selectedUniverse = 1;
+        int selectedPort = 7777;
 
         object _currentViewModel;
         public object CurrentViewModel {
@@ -30,10 +33,11 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
 
         readonly Dictionary<string, BaseViewModel> _panelViewModels;
 
-        public MainWindowViewModel(
-            UdpListenerService listener,
+        public MainWindowViewModel(UdpListenerService listener,
             ArtNetDmxController artNetController) {
             _listener = listener;
+            _listener.UniverseToListen = selectedUniverse;
+            _listener.Start(selectedPort);
             _artNetController = artNetController;
 
             // Preview
@@ -52,7 +56,7 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
                 { "PatchMap",      new PatchMapManagerViewModel() },
                 { "Receivers",     receiversVm },
                 { "Streams",       new StreamManagerViewModel() },
-                { "Settings",      new SystemSettingsPanelViewModel() },
+                { "Settings",      new SystemSettingsPanelViewModel(_listener) },
                 { "DMX Monitor",   new DmxMonitorViewModel(_artNetController) },
                 { "Preview",       Preview },
                 { "DMX Routers",   routersVm }
