@@ -9,6 +9,7 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
     public class PatchMapManagerViewModel : BaseViewModel {
         readonly IJsonFileService<PatchMapDto> _patchService;
 
+
         public ObservableCollection<PatchMapEntryViewModel> Entries {
             get;
         }
@@ -30,7 +31,7 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
         public ICommand ExportCommand {
             get;
         }
-
+    
         PatchMapEntryViewModel _selected;
         public PatchMapEntryViewModel SelectedEntry {
             get => _selected;
@@ -163,6 +164,21 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
             return Entries.Select(e => e.ToModel()).ToList();
         }
 
+        public Dictionary<int, (int x, int y)> GetEntityToPositionMap() {
+            var map = new Dictionary<int, (int x, int y)>();
+            foreach (var entry in Entries) {
+                if (entry.Width <= 0)
+                    continue; // ignore les entrées invalides
+
+                for (int i = 0; i <= entry.EntityEnd - entry.EntityStart; ++i) {
+                    int id = entry.EntityStart + i;
+                    int x = entry.X + i % entry.Width;
+                    int y = entry.Y + i / entry.Width;
+                    map[id] = (x, y);
+                }
+            }
+            return map;
+        }
     }
 }
 

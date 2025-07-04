@@ -11,30 +11,27 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
         public int PreviewHeight {
             get;
         }
-
+        readonly Dictionary<int, (int x, int y)> _entityMap;
         public ObservableCollection<PixelViewModel> Pixels {
             get;
         }
 
-        public MatrixPreviewViewModel(UdpListenerService listener, int width, int height) {
+        public MatrixPreviewViewModel(UdpListenerService listener, int width, int height, Dictionary<int, (int x, int y)> entityMap) {
             PreviewWidth = width;
             PreviewHeight = height;
+            _entityMap = entityMap;
 
-            // Initialise la grille de pixels
-            Pixels = new ObservableCollection<PixelViewModel>(
-                Enumerable.Range(0, height)
-                          .SelectMany(y =>
-                              Enumerable.Range(0, width)
-                                        .Select(x => new PixelViewModel(x, y, Colors.Black))
-                          )
-            );
+            Pixels = new ObservableCollection<PixelViewModel>();
+            for (int y = 0; y < height; y++)
+                for (int x = 0; x < width; x++)
+                    Pixels.Add(new PixelViewModel(x, y, Colors.Black));
 
             listener.OnUpdatePacket += msg => {
                 foreach (var px in msg.Pixels) {
-                    int idx = ComputeIndex(px.Entity);
-                    if (idx >= 0 && idx < Pixels.Count) {
-                        // applique la nouvelle couleur
-                        Pixels[idx].CurrentColor = Color.FromRgb(px.R, px.G, px.B);
+                    if (_entityMap.TryGetValue(px.Entity, out var pos)) {
+                        int idx = pos.y * PreviewWidth + pos.x;
+                        if (idx >= 0 && idx < Pixels.Count)
+                            Pixels[idx].CurrentColor = Color.FromRgb(px.R, px.G, px.B);
                     }
                 }
             };

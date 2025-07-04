@@ -40,16 +40,16 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
             _listener.Start(selectedPort);
             _artNetController = artNetController;
 
-            // Preview
-            Preview = new MatrixPreviewViewModel(_listener, width: 128, height: 128);
-
             // Services de settings
             var settingsService = new SettingsService();
             var patchVm = new PatchMapManagerViewModel();
             var routersVm = new ReceiverConfigPanelViewModel();
             var settingsVm = new SystemSettingsPanelViewModel(_listener, patchVm, routersVm);
+            var entityMap = patchVm.GetEntityToPositionMap();
 
-
+            // Preview
+            Preview = new MatrixPreviewViewModel(_listener, width: 128, height: 128, entityMap);
+        
             // Dictionnaire d’onglets
             _panelViewModels = new Dictionary<string, BaseViewModel>
             {

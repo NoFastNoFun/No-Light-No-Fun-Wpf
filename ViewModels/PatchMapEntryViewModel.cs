@@ -9,6 +9,9 @@ namespace No_Fast_No_Fun_Wpf.ViewModels
         int _entityEnd;
         byte _universeStart;
         byte _universeEnd;
+        int _x;
+        int _y;
+        int _width;
 
         public int EntityStart {
             get => _entityStart;
@@ -30,6 +33,24 @@ namespace No_Fast_No_Fun_Wpf.ViewModels
             set => Set(ref _universeEnd, value);
         }
 
+        public int X {
+            get => _x;
+            set => Set(ref _x, value);
+        }
+
+        public int Y {
+            get => _y;
+            set => Set(ref _y, value);
+        }
+
+        public int Width {
+            get => _width;
+            set => Set(ref _width, value);
+        }
+
+        public int EntityIdStart => EntityStart;
+        public int EntityIdEnd => EntityEnd;
+
         public PatchMapEntryViewModel() {
         }
 
@@ -38,6 +59,9 @@ namespace No_Fast_No_Fun_Wpf.ViewModels
             EntityEnd = dto.EntityEnd;
             UniverseStart = dto.UniverseStart;
             UniverseEnd = dto.UniverseEnd;
+            X = dto.X;
+            Y = dto.Y;
+            Width = dto.Width;
         }
 
         public PatchMapEntryDto ToModel()
@@ -45,7 +69,10 @@ namespace No_Fast_No_Fun_Wpf.ViewModels
                 EntityStart = this.EntityStart,
                 EntityEnd = this.EntityEnd,
                 UniverseStart = this.UniverseStart,
-                UniverseEnd = this.UniverseEnd
+                UniverseEnd = this.UniverseEnd,
+                X = this.X,
+                Y = this.Y,
+                Width = this.Width
             };
 
         public event PropertyChangedEventHandler? PropertyChanged;
