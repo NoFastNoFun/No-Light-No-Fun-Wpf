@@ -33,8 +33,7 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
 
         readonly Dictionary<string, BaseViewModel> _panelViewModels;
 
-        public MainWindowViewModel(UdpListenerService listener,
-            ArtNetDmxController artNetController) {
+        public MainWindowViewModel(UdpListenerService listener, ArtNetDmxController artNetController) {
             _listener = listener;
             _listener.UniverseToListen = selectedUniverse;
             _listener.Start(selectedPort);
@@ -43,26 +42,47 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
             // Services de settings
             var settingsService = new SettingsService();
             var patchVm = new PatchMapManagerViewModel();
+            System.Diagnostics.Debug.WriteLine($"Patch entries count: {patchVm.Entries.Count}");
             var routersVm = new ReceiverConfigPanelViewModel();
             var settingsVm = new SystemSettingsPanelViewModel(_listener, patchVm, routersVm);
-            var entityMap = patchVm.GetEntityToPositionMap();
+            var entityMap = PatchMapManagerViewModel.GenerateEntityMap();
+            System.Diagnostics.Debug.WriteLine($"EntityMap created: {entityMap.Count} entries");
+            foreach (var kv in entityMap) {
+                System.Diagnostics.Debug.WriteLine($"Entity {kv.Key} → Pos({kv.Value.x},{kv.Value.y})");
+            }
+
+
+            // Routage eHub → DMX
+            var patchEntries = patchVm.Entries.Select(vm => vm.ToModel());
+
+            var routingService = new DmxRoutingService(
+                routersVm.Routers.Select(vm => vm.ToModel()),
+                patchEntries,
+                _artNetController
+            );
+            // Routing eHub → DMX
+            _listener.OnUpdatePacket += (UpdateMessage pkt)
+                => routingService.RouteUpdate(pkt);
 
             // Preview
-            Preview = new MatrixPreviewViewModel(_listener, width: 128, height: 128, entityMap);
-        
+            Preview = new MatrixPreviewViewModel(_listener, routingService, entityMap);
+           
+            // Routing eHub → Preview
+            _listener.OnUpdatePacket += Preview.HandleUpdateMessage;
+
+
             // Dictionnaire d’onglets
-            _panelViewModels = new Dictionary<string, BaseViewModel>
-            {
-                { "Settings", settingsVm },
-                { "Configuration", new ConfigEditorViewModel() },
-                { "Monitoring",    new MonitoringDashboardViewModel(_listener) },
-                { "PatchMap", patchVm },
-                { "Receivers", routersVm },
-                { "Streams",       new StreamManagerViewModel() },
-                { "Preview",       Preview },
-                { "DMX Monitor",   new DmxMonitorViewModel(_artNetController) },
-                { "DMX Routers",   routersVm }
-            };
+            _panelViewModels = new Dictionary<string, BaseViewModel> {
+        { "Settings", settingsVm },
+        { "Configuration", new ConfigEditorViewModel() },
+        { "Monitoring", new MonitoringDashboardViewModel(_listener) },
+        { "PatchMap", patchVm },
+        { "Receivers", routersVm },
+        { "Streams", new StreamManagerViewModel() },
+        { "Preview", Preview },
+        { "DMX Monitor", new DmxMonitorViewModel(_artNetController) },
+        { "DMX Routers", routersVm }
+    };
 
             // Initialisation des onglets
             Tabs = new ObservableCollection<string>(_panelViewModels.Keys);
@@ -73,19 +93,6 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
                     CurrentViewModel = vm;
             });
 
-            // Routage eHub → DMX
-            var patchEntries = ((PatchMapManagerViewModel)_panelViewModels["PatchMap"])
-                                .Entries
-                                .Select(vm => vm.ToModel());
-
-            var routingService = new DmxRoutingService(
-                routersVm.Routers.Select(vm => vm.ToModel()),
-                patchEntries,
-                _artNetController);
-
-
-            _listener.OnUpdatePacket += (UpdateMessage pkt)
-                => routingService.RouteUpdate(pkt);
         }
     }
 }

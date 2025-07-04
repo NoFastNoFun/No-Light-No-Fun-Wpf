@@ -11,22 +11,31 @@
         <conv:ColorToBrushConverter x:Key="ColorToBrushConverter"/>
     </UserControl.Resources>
 
-    <ScrollViewer>
-        <ItemsControl ItemsSource="{Binding Pixels, Mode=OneWay}">
-            <ItemsControl.ItemsPanel>
-                <ItemsPanelTemplate>
-                    <!-- lie le UniformGrid à PreviewWidth/PreviewHeight -->
-                    <UniformGrid Columns="{Binding PreviewWidth}"
-                       Rows="{Binding PreviewHeight}"/>
-                </ItemsPanelTemplate>
-            </ItemsControl.ItemsPanel>
-            <ItemsControl.ItemTemplate>
-                <DataTemplate>
-                    <!-- on utilise CurrentColor + converter pour le Fill -->
-                    <Rectangle Width="8" Height="8" Margin="1"
-                     Fill="{Binding CurrentColor, Converter={StaticResource ColorToBrushConverter}}"/>
-                </DataTemplate>
-            </ItemsControl.ItemTemplate>
-        </ItemsControl>
-    </ScrollViewer>
+    <DockPanel>
+        <StackPanel Orientation="Horizontal" DockPanel.Dock="Top" Margin="5">
+            <TextBlock Text="Largeur:" VerticalAlignment="Center" Margin="0,0,5,0"/>
+            <TextBox Width="40" Text="{Binding PreviewWidth, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,10,0"/>
+            <TextBlock Text="Hauteur:" VerticalAlignment="Center" Margin="0,0,5,0"/>
+            <TextBox Width="40" Text="{Binding PreviewHeight, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,10,0"/>
+            <Button Content="Valider" Command="{Binding ApplyResolutionCommand}" Margin="0,0,10,0"/>
+            <Button Content="Ouvrir Console" Command="{Binding OpenConsoleCommand}" />
+        </StackPanel>
+
+        <ScrollViewer>
+            <ItemsControl ItemsSource="{Binding Pixels, Mode=OneWay}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <UniformGrid Columns="{Binding PreviewWidth}"
+                                     Rows="{Binding PreviewHeight}"/>
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Rectangle Width="8" Height="8" Margin="1"
+                                   Fill="{Binding CurrentColor, Converter={StaticResource ColorToBrushConverter}}"/>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+    </DockPanel>
 </UserControl>

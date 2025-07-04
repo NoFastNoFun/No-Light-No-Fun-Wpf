@@ -52,6 +52,7 @@ namespace No_Fast_No_Fun_Wpf.ViewModels
         public int EntityIdEnd => EntityEnd;
 
         public PatchMapEntryViewModel() {
+            Width = 128; 
         }
 
         public PatchMapEntryViewModel(PatchMapEntryDto dto) {
@@ -61,7 +62,7 @@ namespace No_Fast_No_Fun_Wpf.ViewModels
             UniverseEnd = dto.UniverseEnd;
             X = dto.X;
             Y = dto.Y;
-            Width = dto.Width;
+            Width = dto.Width > 0 ? dto.Width : 128;
         }
 
         public PatchMapEntryDto ToModel()

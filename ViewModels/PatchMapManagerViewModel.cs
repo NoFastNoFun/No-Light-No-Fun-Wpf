@@ -163,12 +163,39 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
         public List<PatchMapEntryDto> ToDto() {
             return Entries.Select(e => e.ToModel()).ToList();
         }
+        public static Dictionary<int, (int x, int y)> GenerateEntityMap() {
+            var map = new Dictionary<int, (int x, int y)>();
+
+            int[] startEntities = { 100, 5100, 10100, 15100 };
+            int columnsPerQuarter = 16;
+
+            for (int quarter = 0; quarter < 4; quarter++) {
+                int baseEntity = startEntities[quarter];
+                for (int colInQuarter = 0; colInQuarter < columnsPerQuarter; colInQuarter++) {
+                    int columnIndex = quarter * columnsPerQuarter + colInQuarter;
+                    int entityStart = baseEntity + colInQuarter * 300;
+
+                    for (int i = 0; i < 256; i++) {
+                        int entityId = entityStart + i;
+                        int x = columnIndex;
+                        int y = i;
+                        map[entityId] = (x, y);
+                    }
+                }
+            }
+
+            return map;
+        }
 
         public Dictionary<int, (int x, int y)> GetEntityToPositionMap() {
             var map = new Dictionary<int, (int x, int y)>();
             foreach (var entry in Entries) {
-                if (entry.Width <= 0)
-                    continue; // ignore les entrées invalides
+                System.Diagnostics.Debug.WriteLine($"Entry: Start={entry.EntityStart}, End={entry.EntityEnd}, X={entry.X}, Y={entry.Y}, Width={entry.Width}");
+
+                if (entry.Width <= 0) {
+                    System.Diagnostics.Debug.WriteLine("⚠️ Entry ignorée car Width <= 0");
+                    continue;
+                }
 
                 for (int i = 0; i <= entry.EntityEnd - entry.EntityStart; ++i) {
                     int id = entry.EntityStart + i;
