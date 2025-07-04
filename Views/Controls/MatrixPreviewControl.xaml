@@ -31,7 +31,8 @@
                 </ItemsControl.ItemsPanel>
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>
-                        <Rectangle Width="8" Height="8" Margin="1"
+                        <Rectangle Width="6" Height="6" Margin="0.25"
+                                   Stretch="Fill"
                                    Fill="{Binding CurrentColor, Converter={StaticResource ColorToBrushConverter}}"/>
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>
