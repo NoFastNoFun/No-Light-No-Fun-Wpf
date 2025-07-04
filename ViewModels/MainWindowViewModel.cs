@@ -42,15 +42,10 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
             // Services de settings
             var settingsService = new SettingsService();
             var patchVm = new PatchMapManagerViewModel();
-            System.Diagnostics.Debug.WriteLine($"Patch entries count: {patchVm.Entries.Count}");
             var routersVm = new ReceiverConfigPanelViewModel();
             var settingsVm = new SystemSettingsPanelViewModel(_listener, patchVm, routersVm);
-            var entityMap = PatchMapManagerViewModel.GenerateEntityMap();
-            System.Diagnostics.Debug.WriteLine($"EntityMap created: {entityMap.Count} entries");
-            foreach (var kv in entityMap) {
-                System.Diagnostics.Debug.WriteLine($"Entity {kv.Key} → Pos({kv.Value.x},{kv.Value.y})");
-            }
-
+            var entityMap = patchVm.GenerateEntityMap();
+          
 
             // Routage eHub → DMX
             var patchEntries = patchVm.Entries.Select(vm => vm.ToModel());

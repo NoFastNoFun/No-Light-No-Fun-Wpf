@@ -163,24 +163,19 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
         public List<PatchMapEntryDto> ToDto() {
             return Entries.Select(e => e.ToModel()).ToList();
         }
-        public static Dictionary<int, (int x, int y)> GenerateEntityMap() {
+        public Dictionary<int, (int x, int y)> GenerateEntityMap() {
             var map = new Dictionary<int, (int x, int y)>();
+            const int cols = 64;              // nombre de colonnes (bandes)
+            const int ledsVisiblePerCol = 256; // 128 en montant + 128 en descendant
+            const int ledsParColTotal = 259;  // avec les LEDs invisibles
 
-            int[] startEntities = { 100, 5100, 10100, 15100 };
-            int columnsPerQuarter = 16;
+            int entity = 100;
 
-            for (int quarter = 0; quarter < 4; quarter++) {
-                int baseEntity = startEntities[quarter];
-                for (int colInQuarter = 0; colInQuarter < columnsPerQuarter; colInQuarter++) {
-                    int columnIndex = quarter * columnsPerQuarter + colInQuarter;
-                    int entityStart = baseEntity + colInQuarter * 300;
-
-                    for (int i = 0; i < 256; i++) {
-                        int entityId = entityStart + i;
-                        int x = columnIndex;
-                        int y = i;
-                        map[entityId] = (x, y);
-                    }
+            for (int x = 0; x < cols; x++) {
+                bool isUpward = x % 2 == 0;
+                for (int y = 0; y < ledsVisiblePerCol; y++) {
+                    int logicalY = isUpward ? y : ledsVisiblePerCol - 1 - y;
+                    map[entity++] = (x, logicalY);
                 }
             }
 
