@@ -16,7 +16,9 @@
 
     <DockPanel>
         <StackPanel Orientation="Horizontal" DockPanel.Dock="Top" Margin="5">
-            <Button Content="Ouvrir Console" Command="{Binding OpenConsoleCommand}" />
+            <Button Content="Ouvrir Console" Command="{Binding OpenConsoleCommand}" Margin="5" />
+            <Button Content="Charger JSON" Command="{Binding LoadJsonCommand}" Margin="5"/>
+
         </StackPanel>
 
         <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">

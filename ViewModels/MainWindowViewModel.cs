@@ -89,11 +89,6 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
                 if (param is string tab && _panelViewModels.TryGetValue(tab, out var vm)) {
                     CurrentViewModel = vm;
 
-                    // Appel de OnViewActivated si on passe à l'onglet "Preview"
-                    if (tab == "Preview") {
-                        _previewVm.OnViewActivated();
-                    }
-
                 }
             });
         }

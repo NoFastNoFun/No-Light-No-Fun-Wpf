@@ -24,6 +24,10 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
         private int _targetWidth = 128;
         private int _targetHeight = 128;
 
+        private readonly Dictionary<int, Color> _currentColors = new();
+        private readonly Dictionary<int, DateTime> _lastUpdateTime = new();
+        private const int TTL_MS = 150;
+
         private int _bitmapWidth;
         private int _bitmapHeight;
         private int _dpi = 96;
@@ -33,19 +37,23 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
 
         private readonly UdpListenerService _listener;
         private Dictionary<int, Point3D> _entityMap = new();
-        private Dictionary<int, PixelViewModel> _entityToPixel = new();
         private readonly DmxRoutingService _routingService;
 
-        public ObservableCollection<PixelViewModel> Pixels { get; } = new();
 
         public ICommand OpenConsoleCommand {
             get;
         }
+        public ICommand LoadJsonCommand {
+            get;
+        }
+
 
         public MatrixPreviewViewModel(UdpListenerService listener, DmxRoutingService routingService) {
             _listener = listener;
             _routingService = routingService;
             OpenConsoleCommand = new RelayCommand(_ => OpenConsole());
+            LoadJsonCommand = new RelayCommand(_ => LoadJson());
+
         }
 
         public void OnViewActivated() {
@@ -57,22 +65,11 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
         }
 
         private void BuildPixelsFromMap() {
-            Pixels.Clear();
-            _entityToPixel.Clear();
-
             int maxX = (int)_entityMap.Values.Max(p => p.X);
             int maxY = (int)_entityMap.Values.Max(p => p.Y);
-
             InitializeBitmap();
-
-            foreach (var kv in _entityMap) {
-                var pixel = new PixelViewModel(0, 0, Colors.Black) {
-                    WorldPosition = kv.Value
-                };
-                Pixels.Add(pixel);
-                _entityToPixel[kv.Key] = pixel;
-            }
         }
+
         private void InitializeBitmap() {
             _bitmapWidth = _targetWidth;
             _bitmapHeight = _targetHeight;
@@ -104,28 +101,73 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
 
                 unsafe {
                     IntPtr pBackBuffer = Bitmap.BackBuffer;
+                    DateTime now = DateTime.UtcNow;
 
+                    // 1. Mettre à jour les entités du message
                     foreach (var px in msg.Pixels) {
-                        if (_entityMap.TryGetValue(px.Entity, out var pos)) {
+                        if (!_entityMap.TryGetValue(px.Entity, out var pos))
+                            continue;
+
+                        var newColor = Color.FromRgb(px.R, px.G, px.B);
+
+                        bool shouldRedraw = !_currentColors.TryGetValue(px.Entity, out var current) || current != newColor;
+
+                        if (shouldRedraw) {
+                            _currentColors[px.Entity] = newColor;
+                            _lastUpdateTime[px.Entity] = now;
+
                             int x = (int)(pos.X * pixelSize);
                             int y = (int)(pos.Y * pixelSize);
 
-                            if (x < 0 || y < 0 || x >= _bitmapWidth || y >= _bitmapHeight)
-                                continue;
+                            if (x >= 0 && y >= 0 && x < _bitmapWidth && y < _bitmapHeight) {
+                                int colorInt = (px.B) | (px.G << 8) | (px.R << 16);
 
-                            int color = (px.B) | (px.G << 8) | (px.R << 16);
+                                for (int dx = 0; dx < pixelSize; dx++) {
+                                    for (int dy = 0; dy < pixelSize; dy++) {
+                                        int pxX = x + dx;
+                                        int pxY = y + dy;
 
-                            for (int dx = 0; dx < pixelSize; dx++) {
-                                for (int dy = 0; dy < pixelSize; dy++) {
-                                    int pxX = x + dx;
-                                    int pxY = y + dy;
-
-                                    if (pxX < _bitmapWidth && pxY < _bitmapHeight) {
-                                        int offset = pxY * _stride + pxX * 4;
-                                        *((int*)((byte*)pBackBuffer + offset)) = color;
+                                        if (pxX < _bitmapWidth && pxY < _bitmapHeight) {
+                                            int offset = pxY * _stride + pxX * 4;
+                                            *((int*)((byte*)pBackBuffer + offset)) = colorInt;
+                                        }
                                     }
                                 }
                             }
+                        }
+                        else {
+                            _lastUpdateTime[px.Entity] = now; // même couleur, on rafraîchit juste le TTL
+                        }
+                    }
+
+                    // 2. Éteindre les pixels expirés
+                    var toExpire = new List<int>();
+                    foreach (var kv in _lastUpdateTime) {
+                        if ((now - kv.Value).TotalMilliseconds > TTL_MS)
+                            toExpire.Add(kv.Key);
+                    }
+
+                    foreach (var entity in toExpire) {
+                        if (_entityMap.TryGetValue(entity, out var pos)) {
+                            int x = (int)(pos.X * pixelSize);
+                            int y = (int)(pos.Y * pixelSize);
+
+                            if (x >= 0 && y >= 0 && x < _bitmapWidth && y < _bitmapHeight) {
+                                for (int dx = 0; dx < pixelSize; dx++) {
+                                    for (int dy = 0; dy < pixelSize; dy++) {
+                                        int pxX = x + dx;
+                                        int pxY = y + dy;
+
+                                        if (pxX < _bitmapWidth && pxY < _bitmapHeight) {
+                                            int offset = pxY * _stride + pxX * 4;
+                                            *((int*)((byte*)pBackBuffer + offset)) = 0x000000; // noir
+                                        }
+                                    }
+                                }
+                            }
+
+                            _currentColors[entity] = Colors.Black;
+                            _lastUpdateTime.Remove(entity); // plus actif
                         }
                     }
                 }
@@ -133,6 +175,15 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
                 Bitmap.AddDirtyRect(new Int32Rect(0, 0, _bitmapWidth, _bitmapHeight));
                 Bitmap.Unlock();
             });
+        }
+
+
+        public void LoadJson() {
+            var map = LoadFromJson(_targetWidth, _targetHeight);
+            if (map != null && map.Count > 0) {
+                _entityMap = map;
+                BuildPixelsFromMap(); // recrée bitmap selon le mapping
+            }
         }
 
         public static Dictionary<int, Point3D> LoadFromJson(int targetWidth, int targetHeight) {
@@ -178,8 +229,6 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
                                 0
                         )
                 );
-
-                Debug.WriteLine($"[LOAD] {map.Count} entités chargées entre {minEntity} et {maxEntity}");
                 return map;
             }
 
