@@ -15,6 +15,7 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
         private readonly DmxRoutingService _routingService;
         private readonly Dictionary<int, Point3D> _entityMap;
         private CancellationTokenSource? _mediaCancellation;
+        private CancellationTokenSource? _videoCancellation;
 
         private System.Timers.Timer? _rainbowTimer;
         private double _frame = 0;
@@ -232,6 +233,8 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
         private void StopMedia() {
             _mediaCancellation?.Cancel();
             _mediaCancellation = null;
+            _videoCancellation?.Cancel();
+            _videoCancellation = null;
         }
 
         private void LoadMediaFile() {
@@ -336,7 +339,57 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
 
 
         private async Task PlayVideo(string path) {
-            Debug.WriteLine($"Lecture vidéo non implémentée : {path}");
+            StopMedia(); // Stoppe une vidéo ou GIF en cours
+            _videoCancellation = new CancellationTokenSource();
+            var token = _videoCancellation.Token;
+
+            using var capture = new VideoCapture(path);
+            if (!capture.IsOpened()) {
+                Debug.WriteLine($"Impossible d’ouvrir la vidéo {path}");
+                return;
+            }
+
+            int delay = (int)(1000.0 / 60);
+
+            using var frame = new Mat();
+
+            try {
+                while (!token.IsCancellationRequested) {
+                    if (!capture.Read(frame) || frame.Empty()) {
+                        capture.Set(VideoCaptureProperties.PosFrames, 0);
+                        continue;
+                    }
+
+                    using var resized = frame.Resize(new OpenCvSharp.Size(_matrixWidth, _matrixHeight));
+                    var updateMsg = BuildUpdateFromMat(resized);
+                    _listener.SimulateUpdate(updateMsg);
+                    _routingService.RouteUpdate(updateMsg);
+
+                    await Task.Delay(delay, token);
+                }
+            }
+            catch (TaskCanceledException) {
+                Debug.WriteLine("Lecture de la vidéo arrêtée.");
+            }
         }
+        private UpdateMessage BuildUpdateFromMat(Mat mat) {
+            var pixels = new List<Pixel>();
+
+            foreach (var kvp in _entityMap) {
+                int entityId = kvp.Key;
+                var pos = kvp.Value;
+
+                int x = (int)pos.X;
+                int y = (int)pos.Y;
+
+                if (x >= 0 && x < mat.Width && y >= 0 && y < mat.Height) {
+                    var color = mat.At<Vec3b>(y, x);
+                    pixels.Add(new Pixel((ushort)entityId, color[2], color[1], color[0])); // BGR → RGB
+                }
+            }
+
+            return new UpdateMessage(pixels);
+        }
+
     }
 }
