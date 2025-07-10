@@ -1,22 +1,20 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Core.Messages;
-using Core.Models;
-using No_Fast_No_Fun_Wpf.Services.Network;
-using Services.Matrix;
+﻿using System.Diagnostics;
 using System.Windows.Input;
 using System.Windows.Media;
-using System.Diagnostics;
 using System.Windows.Media.Media3D;
+using Core.Messages;
+using Core.Models;
+using Microsoft.Win32;
+using No_Fast_No_Fun_Wpf.Services.Network;
+using Services.Matrix;
+using OpenCvSharp;
 
 namespace No_Fast_No_Fun_Wpf.ViewModels {
     public class ConsoleWindowViewModel : BaseViewModel {
         private readonly UdpListenerService _listener;
         private readonly DmxRoutingService _routingService;
         private readonly Dictionary<int, Point3D> _entityMap;
+        private CancellationTokenSource? _mediaCancellation;
 
         private System.Timers.Timer? _rainbowTimer;
         private double _frame = 0;
@@ -83,10 +81,17 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
         public ICommand SendToMatrixCommand {
             get;
         }
-
+        public ICommand LoadMediaCommand {
+            get;
+        }
+        public ICommand StopMediaCommand {
+            get;
+        }
         private int _from = 100;
         private int _to = 19858;
         private byte _brightness = 255;
+        private readonly int _matrixWidth = 128;
+        private readonly int _matrixHeight = 128;
         private Color _selectedColor = Colors.Red;
         private Color _effectiveColor = Colors.Red;
 
@@ -99,7 +104,8 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
             SendToMatrixCommand = new RelayCommand(_ => SendToMatrix());
             StartRainbowCommand = new RelayCommand(_ => StartRainbowAnimation());
             StopRainbowCommand = new RelayCommand(_ => StopRainbowAnimation());
-
+            LoadMediaCommand = new RelayCommand(_ => LoadMediaFile());
+            StopMediaCommand = new RelayCommand(_ => StopMedia());
 
             UpdateEffectiveColor();
         }
@@ -217,11 +223,120 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
 
             return Color.FromRgb((byte)(r * 255), (byte)(g * 255), (byte)(b * 255));
         }
+
         private void StopRainbowAnimation() {
             _rainbowTimer?.Stop();
             _rainbowTimer?.Dispose();
             _rainbowTimer = null;
         }
+        private void StopMedia() {
+            _mediaCancellation?.Cancel();
+            _mediaCancellation = null;
+        }
 
+        private void LoadMediaFile() {
+            var dialog = new OpenFileDialog {
+                Filter = "Images and Videos|*.png;*.jpg;*.bmp;*.gif;*.mp4;*.avi"
+            };
+
+            if (dialog.ShowDialog() == true) {
+                string path = dialog.FileName;
+                // À ce stade, tu dispatches la suite du traitement :
+                _ = ProcessMediaFile(path);
+            }
+        }
+        private async Task ProcessMediaFile(string path) {
+            if (path.EndsWith(".gif")) {
+                await PlayGif(path);
+            }
+            else if (path.EndsWith(".mp4") || path.EndsWith(".avi")) {
+                await PlayVideo(path);
+            }
+            else {
+                await SendImageFrame(path);
+            }
+        }
+
+        private async Task SendImageFrame(string path) {
+            using var bitmap = new System.Drawing.Bitmap(path);
+
+            var resized = new System.Drawing.Bitmap(_matrixWidth, _matrixHeight);
+            using (var g = System.Drawing.Graphics.FromImage(resized)) {
+                g.DrawImage(bitmap, 0, 0, _matrixWidth, _matrixHeight);
+            }
+
+            var pixels = new List<Pixel>();
+            foreach (var kvp in _entityMap) {
+                int entityId = kvp.Key;
+                var pos = kvp.Value;
+
+                int x = (int)pos.X;
+                int y = (int)pos.Y;
+                if (x >= 0 && x < resized.Width && y >= 0 && y < resized.Height) {
+                    System.Drawing.Color color = resized.GetPixel(x, y);
+                    pixels.Add(new Pixel((ushort)entityId, color.R, color.G, color.B));
+                }
+            }
+
+            var updateMsg = new UpdateMessage(pixels);
+
+            _listener.SimulateUpdate(updateMsg);
+            _routingService.RouteUpdate(updateMsg);
+        }
+
+
+
+        private async Task PlayGif(string path) {
+            StopMedia(); // Stoppe une animation précédente si elle tourne
+
+            _mediaCancellation = new CancellationTokenSource();
+            var token = _mediaCancellation.Token;
+
+            using var gif = System.Drawing.Image.FromFile(path);
+            var dimension = new System.Drawing.Imaging.FrameDimension(gif.FrameDimensionsList[0]);
+            int frameCount = gif.GetFrameCount(dimension);
+            int delayMs = 1000 / 60; // 60 FPS par défaut
+
+            try {
+                while (!token.IsCancellationRequested) {
+                    for (int i = 0; i < frameCount; i++) {
+                        gif.SelectActiveFrame(dimension, i);
+
+                        using var frame = new System.Drawing.Bitmap(gif);
+                        var resized = new System.Drawing.Bitmap(_matrixWidth, _matrixHeight);
+                        using (var g = System.Drawing.Graphics.FromImage(resized)) {
+                            g.DrawImage(frame, 0, 0, _matrixWidth, _matrixHeight);
+                        }
+
+                        var pixels = new List<Pixel>();
+                        foreach (var kvp in _entityMap) {
+                            int entityId = kvp.Key;
+                            var pos = kvp.Value;
+
+                            int x = (int)pos.X;
+                            int y = (int)pos.Y;
+                            if (x >= 0 && x < resized.Width && y >= 0 && y < resized.Height) {
+                                var color = resized.GetPixel(x, y);
+                                pixels.Add(new Pixel((ushort)entityId, color.R, color.G, color.B));
+                            }
+                        }
+
+                        var updateMsg = new UpdateMessage(pixels);
+                        _listener.SimulateUpdate(updateMsg);
+                        _routingService.RouteUpdate(updateMsg);
+
+                        await Task.Delay(delayMs, token); // interruption propre
+                    }
+                }
+            }
+            catch (TaskCanceledException) {
+                Debug.WriteLine("Lecture du GIF arrêtée.");
+            }
+        }
+
+
+        private async Task PlayVideo(string path) {
+            Debug.WriteLine($"Lecture vidéo non implémentée : {path}");
+        }
     }
 }
