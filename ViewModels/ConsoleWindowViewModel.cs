@@ -10,11 +10,13 @@ using Services.Matrix;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Diagnostics;
+using System.Windows.Media.Media3D;
 
 namespace No_Fast_No_Fun_Wpf.ViewModels {
     public class ConsoleWindowViewModel : BaseViewModel {
         private readonly UdpListenerService _listener;
         private readonly DmxRoutingService _routingService;
+        private readonly Dictionary<int, Point3D> _entityMap;
 
         private System.Timers.Timer? _rainbowTimer;
         private double _frame = 0;
@@ -88,9 +90,10 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
         private Color _selectedColor = Colors.Red;
         private Color _effectiveColor = Colors.Red;
 
-        public ConsoleWindowViewModel(UdpListenerService listener, DmxRoutingService routingService, Dictionary<int, (int x, int y)> entitymap) {
+        public ConsoleWindowViewModel(UdpListenerService listener, DmxRoutingService routingService, Dictionary<int, Point3D> entityMap) {
             _listener = listener;
             _routingService = routingService;
+            _entityMap = entityMap;
 
             SendToPreviewCommand = new RelayCommand(_ => SendToPreview());
             SendToMatrixCommand = new RelayCommand(_ => SendToMatrix());

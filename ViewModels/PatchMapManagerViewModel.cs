@@ -165,22 +165,52 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
         }
         public Dictionary<int, (int x, int y)> GenerateEntityMap() {
             var map = new Dictionary<int, (int x, int y)>();
-            const int cols = 64;              // nombre de colonnes (bandes)
-            const int ledsVisiblePerCol = 256; // 128 en montant + 128 en descendant
-            const int ledsParColTotal = 259;  // avec les LEDs invisibles
 
-            int entity = 100;
+            const int columns = 64;
+            const int ledsPerDirection = 128; // montée ou descente
+            const int totalVisiblePerColumn = ledsPerDirection * 2;
+            const int startEntityId = 100;
 
-            for (int x = 0; x < cols; x++) {
-                bool isUpward = x % 2 == 0;
-                for (int y = 0; y < ledsVisiblePerCol; y++) {
-                    int logicalY = isUpward ? y : ledsVisiblePerCol - 1 - y;
-                    map[entity++] = (x, logicalY);
+            int entityId = startEntityId;
+
+            for (int x = 0; x < columns; x++) {
+                bool upwardsFirst = (x % 2 == 0); // colonnes paires : montée puis descente, impaires : descente puis montée
+
+                if (upwardsFirst) {
+                    // montée
+                    for (int y = 0; y < ledsPerDirection; y++) {
+                        map[entityId++] = (x, y);
+                    }
+
+                    entityId++; // skip LED invisible du haut
+
+                    // descente
+                    for (int y = ledsPerDirection; y < ledsPerDirection * 2; y++) {
+                        map[entityId++] = (x, y);
+                    }
+
+                    entityId++; // skip LED invisible du bas
+                }
+                else {
+                    // descente
+                    for (int y = (ledsPerDirection * 2) - 1; y >= ledsPerDirection; y--) {
+                        map[entityId++] = (x, y);
+                    }
+
+                    entityId++; // skip LED invisible du bas
+
+                    // montée
+                    for (int y = ledsPerDirection - 1; y >= 0; y--) {
+                        map[entityId++] = (x, y);
+                    }
+
+                    entityId++; // skip LED invisible du haut
                 }
             }
 
             return map;
         }
+
 
         public Dictionary<int, (int x, int y)> GetEntityToPositionMap() {
             var map = new Dictionary<int, (int x, int y)>();

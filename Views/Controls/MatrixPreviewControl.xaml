@@ -4,39 +4,27 @@
              xmlns:conv="clr-namespace:No_Fast_No_Fun_Wpf.Converters"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:viewmodels="clr-namespace:No_Fast_No_Fun_Wpf.ViewModels"
+             d:DataContext="{d:DesignInstance Type=viewmodels:MatrixPreviewViewModel}"
              mc:Ignorable="d"
              d:DesignWidth="400" d:DesignHeight="400">
 
     <UserControl.Resources>
         <conv:ColorToBrushConverter x:Key="ColorToBrushConverter"/>
+        <conv:MultiplyByFiveConverter x:Key="MultiplyByFiveConverter"/>
     </UserControl.Resources>
 
     <DockPanel>
         <StackPanel Orientation="Horizontal" DockPanel.Dock="Top" Margin="5">
-            <TextBlock Text="Largeur:" VerticalAlignment="Center" Margin="0,0,5,0"/>
-            <TextBox Width="40" Text="{Binding PreviewWidth, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,10,0"/>
-            <TextBlock Text="Hauteur:" VerticalAlignment="Center" Margin="0,0,5,0"/>
-            <TextBox Width="40" Text="{Binding PreviewHeight, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,10,0"/>
-            <Button Content="Valider" Command="{Binding ApplyResolutionCommand}" Margin="0,0,10,0"/>
             <Button Content="Ouvrir Console" Command="{Binding OpenConsoleCommand}" />
         </StackPanel>
 
-        <ScrollViewer>
-            <ItemsControl ItemsSource="{Binding Pixels, Mode=OneWay}">
-                <ItemsControl.ItemsPanel>
-                    <ItemsPanelTemplate>
-                        <UniformGrid Columns="{Binding PreviewWidth}"
-                                     Rows="{Binding PreviewHeight}"/>
-                    </ItemsPanelTemplate>
-                </ItemsControl.ItemsPanel>
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate>
-                        <Rectangle Width="6" Height="6" Margin="0.25"
-                                   Stretch="Fill"
-                                   Fill="{Binding CurrentColor, Converter={StaticResource ColorToBrushConverter}}"/>
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
+        <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+            <Image Source="{Binding Bitmap}" Stretch="None" SnapsToDevicePixels="True" >
+                <Image.LayoutTransform>
+                    <ScaleTransform ScaleX="5" ScaleY="5" />
+                </Image.LayoutTransform>
+            </Image>
         </ScrollViewer>
     </DockPanel>
 </UserControl>

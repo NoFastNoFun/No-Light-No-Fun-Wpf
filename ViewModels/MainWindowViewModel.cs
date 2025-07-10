@@ -1,5 +1,6 @@
 ﻿using System.Collections.ObjectModel;
 using System.Windows.Input;
+using System.Windows.Media.Media3D;
 using Core.Messages;
 using No_Fast_No_Fun_Wpf.Services.Network;
 using Services.Config;
@@ -10,6 +11,7 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
         public ObservableCollection<string> Tabs {
             get;
         }
+        private readonly MatrixPreviewViewModel _previewVm;
 
         public MatrixPreviewViewModel Preview {
             get;
@@ -44,8 +46,7 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
             var patchVm = new PatchMapManagerViewModel();
             var routersVm = new ReceiverConfigPanelViewModel();
             var settingsVm = new SystemSettingsPanelViewModel(_listener, patchVm, routersVm);
-            var entityMap = patchVm.GenerateEntityMap();
-          
+            
 
             // Routage eHub → DMX
             var patchEntries = patchVm.Entries.Select(vm => vm.ToModel());
@@ -55,16 +56,15 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
                 patchEntries,
                 _artNetController
             );
+            var previewVm = new MatrixPreviewViewModel(_listener, routingService);
+            _previewVm = previewVm;
+
+
+
             // Routing eHub → DMX
             _listener.OnUpdatePacket += (UpdateMessage pkt)
                 => routingService.RouteUpdate(pkt);
-
-            // Preview
-            Preview = new MatrixPreviewViewModel(_listener, routingService, entityMap);
            
-            // Routing eHub → Preview
-            _listener.OnUpdatePacket += Preview.HandleUpdateMessage;
-
 
             // Dictionnaire d’onglets
             _panelViewModels = new Dictionary<string, BaseViewModel> {
@@ -74,20 +74,28 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
         { "PatchMap", patchVm },
         { "Receivers", routersVm },
         { "Streams", new StreamManagerViewModel() },
-        { "Preview", Preview },
+        { "Preview", previewVm },
         { "DMX Monitor", new DmxMonitorViewModel(_artNetController) },
         { "DMX Routers", routersVm }
     };
+            // Routing eHub → Preview
+            _listener.OnUpdatePacket += previewVm.HandleUpdateMessage;
 
             // Initialisation des onglets
             Tabs = new ObservableCollection<string>(_panelViewModels.Keys);
             CurrentViewModel = _panelViewModels[Tabs[0]];
 
             ChangeTabCommand = new RelayCommand(param => {
-                if (param is string tab && _panelViewModels.TryGetValue(tab, out var vm))
+                if (param is string tab && _panelViewModels.TryGetValue(tab, out var vm)) {
                     CurrentViewModel = vm;
-            });
 
+                    // Appel de OnViewActivated si on passe à l'onglet "Preview"
+                    if (tab == "Preview") {
+                        _previewVm.OnViewActivated();
+                    }
+
+                }
+            });
         }
     }
 }
