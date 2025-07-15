@@ -18,6 +18,8 @@ using Services.Matrix;
 namespace No_Fast_No_Fun_Wpf.ViewModels {
     public class MatrixPreviewViewModel : BaseViewModel {
         private WriteableBitmap _bitmap;
+        public IReadOnlyDictionary<int, Point3D> EntityMap => _entityMap;
+
         public WriteableBitmap Bitmap {
             get => _bitmap;
             set => SetProperty(ref _bitmap, value);
@@ -38,8 +40,8 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
 
         private readonly UdpListenerService _listener;
         private Dictionary<int, Point3D> _entityMap = new();
-        private readonly DmxRoutingService _routingService;
-
+        private DmxRoutingService _routingService;
+     
 
         public ICommand OpenConsoleCommand {
             get;

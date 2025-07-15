@@ -23,8 +23,10 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
                      EntityIdStart = u.EntityStart,
                      EntityIdEnd = u.EntityEnd,
                      UniverseStart = u.UniverseStart,
-                     UniverseEnd = u.UniverseEnd
+                     UniverseEnd = u.UniverseEnd,
+                     StartAddress = u.StartAddress // ← important !
                  }))
+
             );
         }
 
@@ -41,10 +43,66 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
                 Port = this.Port
             };
 
-            foreach (var vm in this.Universes)
-                model.Universes.Add(vm.ToModel());
+            int maxPixelsPerUniverse = 170;
+            byte currentUniverse = Universes.Min(u => u.UniverseStart); // point de départ global
+
+            foreach (var vm in this.Universes) {
+                int totalPixels = vm.EntityIdEnd - vm.EntityIdStart + 1;
+                int pixelOffset = 0;
+
+                while (totalPixels > 0) {
+                    int pixelsInThisUniverse = Math.Min(totalPixels, maxPixelsPerUniverse);
+                    int startEntity = vm.EntityIdStart + pixelOffset;
+                    int endEntity = startEntity + pixelsInThisUniverse - 1;
+
+                    var um = new UniverseMap {
+                        EntityIdStart = startEntity,
+                        EntityIdEnd = endEntity,
+                        UniverseStart = currentUniverse,
+                        UniverseEnd = currentUniverse,
+                        StartAddress = 0
+                    };
+
+                    model.Universes.Add(um);
+
+                    totalPixels -= pixelsInThisUniverse;
+                    pixelOffset += pixelsInThisUniverse;
+                    currentUniverse++; // on incrémente après chaque split
+                }
+            }
 
             return model;
         }
+        public List<PatchMapEntryDto> ToPatchMap() {
+            return this.Universes
+                .SelectMany(vm => {
+                    int totalPixels = vm.EntityIdEnd - vm.EntityIdStart + 1;
+                    int maxPixelsPerUniverse = 170;
+                    byte currentUniverse = vm.UniverseStart;
+
+                    var patches = new List<PatchMapEntryDto>();
+                    int pixelOffset = 0;
+
+                    while (totalPixels > 0) {
+                        int pixelsInThisUniverse = Math.Min(totalPixels, maxPixelsPerUniverse);
+                        int startEntity = vm.EntityIdStart + pixelOffset;
+                        int endEntity = startEntity + pixelsInThisUniverse - 1;
+
+                        patches.Add(new PatchMapEntryDto {
+                            EntityStart = startEntity,
+                            EntityEnd = endEntity,
+                            UniverseStart = currentUniverse,
+                            UniverseEnd = currentUniverse
+                        });
+
+                        totalPixels -= pixelsInThisUniverse;
+                        pixelOffset += pixelsInThisUniverse;
+                        currentUniverse++;
+                    }
+
+                    return patches;
+                }).ToList();
+        }
+
     }
 }

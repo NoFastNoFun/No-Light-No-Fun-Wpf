@@ -46,16 +46,18 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
             var patchVm = new PatchMapManagerViewModel();
             var routersVm = new ReceiverConfigPanelViewModel();
             var settingsVm = new SystemSettingsPanelViewModel(_listener, patchVm, routersVm);
-            
 
-            // Routage eHub → DMX
-            var patchEntries = patchVm.Entries.Select(vm => vm.ToModel());
+
+            // Génération cohérente des univers + patch map dynamiques
+            var routers = routersVm.Routers.Select(vm => vm.ToModel()).ToList();
+            var patchEntries = routersVm.Routers.SelectMany(vm => vm.ToPatchMap()).ToList();
 
             var routingService = new DmxRoutingService(
-                routersVm.Routers.Select(vm => vm.ToModel()),
+                routers,
                 patchEntries,
                 _artNetController
             );
+
             var previewVm = new MatrixPreviewViewModel(_listener, routingService);
             _previewVm = previewVm;
 
