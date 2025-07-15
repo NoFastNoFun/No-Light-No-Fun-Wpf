@@ -50,7 +50,8 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
 
             // Génération cohérente des univers + patch map dynamiques
             var routers = routersVm.Routers.Select(vm => vm.ToModel()).ToList();
-            var patchEntries = routersVm.Routers.SelectMany(vm => vm.ToPatchMap()).ToList();
+            var patchEntries = patchVm.Entries.Select(vm => vm.ToModel()).ToList();
+
 
             var routingService = new DmxRoutingService(
                 routers,
@@ -58,7 +59,7 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
                 _artNetController
             );
 
-            var previewVm = new MatrixPreviewViewModel(_listener, routingService);
+            var previewVm = new MatrixPreviewViewModel(_listener, routingService, patchVm);
             _previewVm = previewVm;
 
 

@@ -16,6 +16,7 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
         private readonly Dictionary<int, Point3D> _entityMap;
         private CancellationTokenSource? _mediaCancellation;
         private CancellationTokenSource? _videoCancellation;
+        private readonly PatchMapManagerViewModel _patchMapManager;
 
         private System.Timers.Timer? _rainbowTimer;
         private double _frame = 0;
@@ -96,7 +97,7 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
         private Color _selectedColor = Colors.Red;
         private Color _effectiveColor = Colors.Red;
 
-        public ConsoleWindowViewModel(UdpListenerService listener, DmxRoutingService routingService, Dictionary<int, Point3D> entityMap) {
+        public ConsoleWindowViewModel(UdpListenerService listener, DmxRoutingService routingService, Dictionary<int, Point3D> entityMap, PatchMapManagerViewModel patchMapManager) {
             _listener = listener;
             _routingService = routingService;
             _entityMap = entityMap;
@@ -109,6 +110,7 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
             StopMediaCommand = new RelayCommand(_ => StopMedia());
 
             UpdateEffectiveColor();
+            _patchMapManager = patchMapManager;
         }
 
         private void UpdateEffectiveColor() {
@@ -120,14 +122,16 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
 
         private UpdateMessage BuildUpdateMessage() {
             var pixels = new List<Pixel>();
-            ushort start = (ushort)FromEntity;
-            ushort end = (ushort)ToEntity;
 
-            for (ushort i = start; i <= end; i++) {
-                pixels.Add(new Pixel(i, EffectiveColor.R, EffectiveColor.G, EffectiveColor.B));
+            foreach (var entry in _patchMapManager.Entries) {
+                for (int i = entry.EntityStart; i <= entry.EntityEnd; i++) {
+                    pixels.Add(new Pixel((ushort)i, EffectiveColor.R, EffectiveColor.G, EffectiveColor.B));
+                }
             }
             return new UpdateMessage(pixels);
         }
+
+
 
         private void SendToPreview() {
             var msg = BuildUpdateMessage();

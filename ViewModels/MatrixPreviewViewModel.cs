@@ -19,6 +19,8 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
     public class MatrixPreviewViewModel : BaseViewModel {
         private WriteableBitmap _bitmap;
         public IReadOnlyDictionary<int, Point3D> EntityMap => _entityMap;
+        private readonly PatchMapManagerViewModel _patchMapManager;
+
 
         public WriteableBitmap Bitmap {
             get => _bitmap;
@@ -51,9 +53,10 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
         }
 
 
-        public MatrixPreviewViewModel(UdpListenerService listener, DmxRoutingService routingService) {
+        public MatrixPreviewViewModel(UdpListenerService listener, DmxRoutingService routingService, PatchMapManagerViewModel patchMapManager) {
             _listener = listener;
             _routingService = routingService;
+            _patchMapManager = patchMapManager;
             OpenConsoleCommand = new RelayCommand(_ => OpenConsole());
             LoadJsonCommand = new RelayCommand(_ => LoadJson());
 
@@ -91,7 +94,7 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
         }
 
         private void OpenConsole() {
-            var vm = new ConsoleWindowViewModel(_listener, _routingService, _entityMap);
+            var vm = new ConsoleWindowViewModel(_listener, _routingService, _entityMap, _patchMapManager);
             var win = new ConsoleWindow(_listener, _routingService, _entityMap) { DataContext = vm };
             win.Show();
         }

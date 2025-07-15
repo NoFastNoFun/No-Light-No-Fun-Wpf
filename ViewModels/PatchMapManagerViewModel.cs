@@ -44,11 +44,12 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
             var path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "patchmap.csv");
             if (!File.Exists(path)) {
                 var template = new[] {
-                     "EntityStart,EntityEnd,UniverseStart,UniverseEnd",
-                     "100,5099,0,31",
-                     "5100,10099,32,63",
-                     "10100,15199,64,95",
-                     "15200,20299,96,127"
+                    "EntityStart,EntityEnd,UniverseStart,UniverseEnd",
+                    "100,5099,0,31",
+                    "5100,10099,32,63",
+                    "10100,15199,64,95",
+                    "15200,19858,96,127"
+
 };
 
                 File.WriteAllLines(path, template);
@@ -212,6 +213,7 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
             return map;
         }
 
+       
 
         public Dictionary<int, (int x, int y)> GetEntityToPositionMap() {
             var map = new Dictionary<int, (int x, int y)>();
@@ -232,6 +234,7 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
             }
             return map;
         }
+
     }
 }
 

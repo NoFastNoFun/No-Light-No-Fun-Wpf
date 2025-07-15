@@ -68,15 +68,30 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
         }
 
         private void Save() {
+            // Génère le PatchMap directement à partir des univers déclarés dans les routeurs
+            var patchMap = _routerVm.Routers
+                .SelectMany(routerVm => routerVm.Universes.Select(u => new PatchMapEntryDto {
+                    EntityStart = u.EntityIdStart,
+                    EntityEnd = u.EntityIdEnd,
+                    UniverseStart = u.UniverseStart,
+                    UniverseEnd = u.UniverseEnd,
+                    X = 0,         
+                    Y = 0,
+                    Width = 128   
+                }))
+                .OrderBy(e => e.EntityStart) 
+                .ToList();
+
             var dto = new AppConfigDto {
                 ListeningPort = SelectedPort,
                 ListeningUniverse = SelectedUniverse,
-                PatchMap = _patchVm.Entries.Select(e => e.ToModel()).ToList(),
+                PatchMap = patchMap,
                 Routers = _routerVm.Routers.Select(r => r.ToDto()).ToList()
             };
             _jsonService.Save(dto);
-            Logs.Add($"[{DateTime.Now:HH:mm:ss}] Paramètres sauvegardés");
+            Logs.Add($"[{DateTime.Now:HH:mm:ss}] Paramètres sauvegardés (PatchMap auto-généré depuis les routeurs)");
         }
+
 
         private void Load() {
             var dto = _jsonService.Load();
