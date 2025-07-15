@@ -1,0 +1,56 @@
+{
+  "Routers": [
+    {
+      "Ip": "192.168.1.45",
+      "Port": 6454,
+      "Universes": [
+        {
+          "EntityStart": 100,
+          "EntityEnd": 4858,
+          "UniverseStart": 0,
+          "UniverseEnd": 31,
+          "StartAddress": 0
+        }
+      ]
+    },
+    {
+      "Ip": "192.168.1.46",
+      "Port": 6454,
+      "Universes": [
+        {
+          "EntityStart": 5100,
+          "EntityEnd": 9858,
+          "UniverseStart": 32,
+          "UniverseEnd": 63,
+          "StartAddress": 0
+        }
+      ]
+    },
+    {
+      "Ip": "192.168.1.47",
+      "Port": 6454,
+      "Universes": [
+        {
+          "EntityStart": 10100,
+          "EntityEnd": 14858,
+          "UniverseStart": 64,
+          "UniverseEnd": 95,
+          "StartAddress": 0
+        }
+      ]
+    },
+    {
+      "Ip": "192.168.1.48",
+      "Port": 6454,
+      "Universes": [
+        {
+          "EntityStart": 15100,
+          "EntityEnd": 19858,
+          "UniverseStart": 96,
+          "UniverseEnd": 127,
+          "StartAddress": 0
+        }
+      ]
+    }
+  ]
+}

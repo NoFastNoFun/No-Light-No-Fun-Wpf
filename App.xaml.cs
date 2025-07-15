@@ -10,6 +10,7 @@ namespace No_Fast_No_Fun_Wpf {
     public partial class App : Application {
         private UdpListenerService _listener;
         private ArtNetDmxController _artNetController;
+        private DmxRoutingService _routingService;
 
         protected override void OnStartup(StartupEventArgs e) {
             base.OnStartup(e);
@@ -22,46 +23,32 @@ namespace No_Fast_No_Fun_Wpf {
             var dmxService = new JsonFileConfigService<DmxSettingsDto>("dmxsettings.json");
             DmxSettingsDto dmxSettings = dmxService.Load();
 
-            // 3) Création du contrôleur Art-Net avec la liste des routeurs
+            // 3) Création du contrôleur Art-Net
             _artNetController = new ArtNetDmxController();
 
-            // 4) Branche chaque update eHub vers l’envoi DMX Art-Net
+            // 4) Création du service de routage DMX
+            var routers = dmxSettings.Routers.Select(r => new DmxRouterSettings {
+                Ip = r.Ip,
+                Port = r.Port,
+                Universes = r.Universes.Select(u => new UniverseMap {
+                    EntityIdStart = u.EntityStart,
+                    EntityIdEnd = u.EntityEnd,
+                    UniverseStart = u.UniverseStart,
+                    UniverseEnd = u.UniverseEnd,
+                    StartAddress = u.StartAddress
+                }).ToList()
+            }).ToList();
+
+            var patches = new List<PatchMapEntryDto>(); // Empty for now, can be loaded from file if needed
+
+            _routingService = new DmxRoutingService(routers, patches, _artNetController);
+
+            // 5) Branche chaque update eHub vers le service de routage
             _listener.OnUpdatePacket += packet => {
-                foreach (var router in dmxSettings.Routers) {
-                    // Prépare un buffer par univers mappé
-                    var frames = new Dictionary<byte, byte[]>();
-                    foreach (var map in router.Universes)
-                        for (byte uni = map.UniverseStart; uni <= map.UniverseEnd; uni++)
-                            frames[uni] = new byte[512];
-
-                    // Remplit les buffers d’après les entités
-                    foreach (var px in packet.Pixels) {
-                        foreach (var map in router.Universes) {
-                            if (px.Entity >= map.EntityStart && px.Entity <= map.EntityEnd) {
-                                int localIndex = px.Entity - map.EntityStart;
-                                byte uni = (byte)(map.UniverseStart + (localIndex / 170));
-                                int channel = (localIndex % 170) * 3;
-
-                                var buf = frames[uni];
-                                buf[channel + 0] = px.R;
-                                buf[channel + 1] = px.G;
-                                buf[channel + 2] = px.B;
-                                break;
-                            }
-                        }
-                    }
-
-
-                    // Envoie toutes les trames univers par univers
-                    foreach (var kv in frames) {
-                        byte universe = kv.Key;
-                        byte[] data = kv.Value;
-                        _artNetController.SendDmxFrame(router.Ip, router.Port, universe, data);
-                    }
-                }
+                _routingService.RouteUpdate(packet);
             };
 
-            // 5) Instanciation et affichage de la fenêtre principale
+            // 6) Instanciation et affichage de la fenêtre principale
             var mainVm = new MainWindowViewModel(_listener, _artNetController);
             var window = new MainWindow {
                 DataContext = mainVm

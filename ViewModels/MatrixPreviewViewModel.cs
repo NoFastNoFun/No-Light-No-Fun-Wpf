@@ -42,7 +42,7 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
 
         private readonly UdpListenerService _listener;
         private Dictionary<int, Point3D> _entityMap = new();
-        private DmxRoutingService _routingService;
+        private DmxRoutingService? _routingService;
      
 
         public ICommand OpenConsoleCommand {
@@ -53,13 +53,12 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
         }
 
 
-        public MatrixPreviewViewModel(UdpListenerService listener, DmxRoutingService routingService, PatchMapManagerViewModel patchMapManager) {
+        public MatrixPreviewViewModel(UdpListenerService listener, DmxRoutingService? routingService, PatchMapManagerViewModel patchMapManager) {
             _listener = listener;
             _routingService = routingService;
             _patchMapManager = patchMapManager;
             OpenConsoleCommand = new RelayCommand(_ => OpenConsole());
             LoadJsonCommand = new RelayCommand(_ => LoadJson());
-
         }
 
         public void OnViewActivated() {

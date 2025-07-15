@@ -37,8 +37,6 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
 
         public MainWindowViewModel(UdpListenerService listener, ArtNetDmxController artNetController) {
             _listener = listener;
-            _listener.UniverseToListen = selectedUniverse;
-            _listener.Start(selectedPort);
             _artNetController = artNetController;
 
             // Services de settings
@@ -47,40 +45,23 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
             var routersVm = new ReceiverConfigPanelViewModel();
             var settingsVm = new SystemSettingsPanelViewModel(_listener, patchVm, routersVm);
 
-
-            // Génération cohérente des univers + patch map dynamiques
-            var routers = routersVm.Routers.Select(vm => vm.ToModel()).ToList();
-            var patchEntries = patchVm.Entries.Select(vm => vm.ToModel()).ToList();
-
-
-            var routingService = new DmxRoutingService(
-                routers,
-                patchEntries,
-                _artNetController
-            );
-
-            var previewVm = new MatrixPreviewViewModel(_listener, routingService, patchVm);
+            // Create preview VM without routing service (routing is handled in App.xaml.cs)
+            var previewVm = new MatrixPreviewViewModel(_listener, null, patchVm);
             _previewVm = previewVm;
 
-
-
-            // Routing eHub → DMX
-            _listener.OnUpdatePacket += (UpdateMessage pkt)
-                => routingService.RouteUpdate(pkt);
-           
-
-            // Dictionnaire d’onglets
+            // Dictionnaire d'onglets
             _panelViewModels = new Dictionary<string, BaseViewModel> {
-        { "Settings", settingsVm },
-        { "Configuration", new ConfigEditorViewModel() },
-        { "Monitoring", new MonitoringDashboardViewModel(_listener) },
-        { "PatchMap", patchVm },
-        { "Receivers", routersVm },
-        { "Streams", new StreamManagerViewModel() },
-        { "Preview", previewVm },
-        { "DMX Monitor", new DmxMonitorViewModel(_artNetController) },
-        { "DMX Routers", routersVm }
-    };
+                { "Settings", settingsVm },
+                { "Configuration", new ConfigEditorViewModel() },
+                { "Monitoring", new MonitoringDashboardViewModel(_listener) },
+                { "PatchMap", patchVm },
+                { "Receivers", routersVm },
+                { "Streams", new StreamManagerViewModel() },
+                { "Preview", previewVm },
+                { "DMX Monitor", new DmxMonitorViewModel(_artNetController) },
+                { "DMX Routers", routersVm }
+            };
+            
             // Routing eHub → Preview
             _listener.OnUpdatePacket += previewVm.HandleUpdateMessage;
 
@@ -91,7 +72,6 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
             ChangeTabCommand = new RelayCommand(param => {
                 if (param is string tab && _panelViewModels.TryGetValue(tab, out var vm)) {
                     CurrentViewModel = vm;
-
                 }
             });
         }
