@@ -12,7 +12,7 @@ using Core.Models;
 namespace No_Fast_No_Fun_Wpf.ViewModels {
     public class ConsoleWindowViewModel : BaseViewModel {
         private readonly UdpListenerService _listener;
-        private readonly DmxRoutingService _routingService;
+        private readonly IDmxRoutingService _routingService;
         private readonly Dictionary<int, Point3D> _entityMap;
         private readonly PatchMapManagerViewModel _patchMapManager;
         private readonly ConfigEditorViewModel _configEditor;
@@ -103,7 +103,7 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
 
         public ConsoleWindowViewModel(
             UdpListenerService listener,
-            DmxRoutingService routingService,
+            IDmxRoutingService routingService,
             Dictionary<int, Point3D> entityMap,
             PatchMapManagerViewModel patchMapManager,
             ConfigEditorViewModel configEditor) {

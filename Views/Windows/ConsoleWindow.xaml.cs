@@ -7,7 +7,7 @@ using Services.Matrix;
 namespace No_Fast_No_Fun_Wpf.Views.Windows {
     public partial class ConsoleWindow : Window {
         private readonly UdpListenerService _listener;
-        private readonly DmxRoutingService _routingService;
+        private readonly IDmxRoutingService _routingService;
         private readonly Dictionary<int, Point3D> _entityMap;
 
 
@@ -15,7 +15,7 @@ namespace No_Fast_No_Fun_Wpf.Views.Windows {
         public int ToEntity { get; set; } = 19858;
         public Color SelectedColor { get; set; } = Colors.Red;
 
-        public ConsoleWindow(UdpListenerService listener, DmxRoutingService routingService,Dictionary<int, Point3D> entityMap ) {
+        public ConsoleWindow(UdpListenerService listener, IDmxRoutingService routingService, Dictionary<int, Point3D> entityMap ) {
             InitializeComponent();
             _listener = listener;
             _routingService = routingService;

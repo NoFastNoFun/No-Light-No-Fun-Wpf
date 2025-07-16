@@ -8,8 +8,8 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using Core.Messages;
 using Services.Matrix;
-using Services.Config;
-using No_Fast_No_Fun_Wpf.ViewModels;
+using No_Fast_No_Fun_Wpf.Services.Network;
+using Core.Models;
 
 namespace No_Fast_No_Fun_Wpf.ViewModels
 {
@@ -17,7 +17,7 @@ namespace No_Fast_No_Fun_Wpf.ViewModels
     {
         private WriteableBitmap _bitmap;
         private readonly IDmxRoutingService _routingService;
-        private readonly ConfigModel _config;
+        private readonly Config _config;
         private readonly Dictionary<int, Color> _currentColors = new();
         private readonly Dictionary<int, DateTime> _lastUpdateTime = new();
         private const int TTL_MS = 150;
@@ -41,7 +41,7 @@ namespace No_Fast_No_Fun_Wpf.ViewModels
 
         public ICommand RefreshCommand { get; }
 
-        public MatrixMonitoringViewModel(IDmxRoutingService routingService, ConfigModel config, UdpListenerService listener = null)
+        public MatrixMonitoringViewModel(IDmxRoutingService routingService, Config config, UdpListenerService listener = null)
         {
             _routingService = routingService;
             _config = config;

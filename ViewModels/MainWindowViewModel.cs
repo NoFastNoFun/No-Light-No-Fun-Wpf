@@ -39,7 +39,7 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
             PatchMapManagerViewModel patchMapManagerVm,
             MatrixPreviewViewModel previewVm,
             AppConfigDto appConfig,
-            ConfigModel backendConfig,
+            Config backendConfig,
             IDmxRoutingService routingService
         ) {
             _listener = listener;

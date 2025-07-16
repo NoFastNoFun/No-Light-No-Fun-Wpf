@@ -1,7 +1,7 @@
 ﻿using System.Windows;
 using Core.Dtos;
 using Core.Models;
-using ConfigModel = Core.Models.Config;
+
 using No_Fast_No_Fun_Wpf.Services.Network;
 using No_Fast_No_Fun_Wpf.ViewModels;
 using Services.Config;
