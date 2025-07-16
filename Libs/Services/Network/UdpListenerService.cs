@@ -57,34 +57,45 @@ namespace No_Fast_No_Fun_Wpf.Services.Network {
                     result = await _udp.ReceiveAsync();
                 }
                 catch (ObjectDisposedException) {
-                    // UDP fermé, on sort
+                    Debug.WriteLine("[UDP] Socket closed, exiting listen loop.");
                     break;
                 }
-                catch (Exception) {
+                catch (Exception ex) {
+                    Debug.WriteLine($"[UDP] Exception: {ex.Message}");
                     continue;
                 }
 
                 var data = result.Buffer;
-                if (data.Length < 6)
+                Debug.WriteLine($"[UDP] Packet received: {data.Length} bytes from {result.RemoteEndPoint}");
+                if (data.Length < 6) {
+                    Debug.WriteLine("[UDP] Packet too short, ignored.");
                     continue;
+                }
 
                 // Vérifie l’en-tête eHuB
-                if (data[0] != (byte)'e' || data[1] != (byte)'H' || data[2] != (byte)'u' || data[3] != (byte)'B')
-                continue;
+                if (data[0] != (byte)'e' || data[1] != (byte)'H' || data[2] != (byte)'u' || data[3] != (byte)'B') {
+                    Debug.WriteLine("[UDP] Invalid eHuB header, ignored.");
+                    continue;
+                }
 
                 int opcode = data[4];
                 int universe = data[5];
-                if (_universe.HasValue && universe != _universe.Value)
+                if (_universe.HasValue && universe != _universe.Value) {
+                    Debug.WriteLine($"[UDP] Universe mismatch (got {universe}, expected {_universe.Value}), ignored.");
                     continue;
+                }
 
+                Debug.WriteLine($"[UDP] eHuB packet: opcode={opcode}, universe={universe}");
 
                 switch (opcode) {
                     case 1:
+                        Debug.WriteLine("[UDP] Parsing ConfigMessage");
                         var cfg = ConfigMessage.Parse(data, 6);
                         OnConfigPacket?.Invoke(cfg);
                         break;
 
                     case 2:
+                        Debug.WriteLine("[UDP] Parsing UpdateMessage");
                         var upd = UpdateMessage.Parse(data, 6);
                         OnUpdatePacket?.Invoke(upd);
                         break;
@@ -92,8 +103,12 @@ namespace No_Fast_No_Fun_Wpf.Services.Network {
                     case 3:
                     case 4:
                     case 5:
+                        Debug.WriteLine("[UDP] Parsing RemoteControlMessage");
                         var cmd = RemoteControlMessage.Parse(data, 6);
                         OnRemotePacket?.Invoke(cmd);
+                        break;
+                    default:
+                        Debug.WriteLine($"[UDP] Unknown opcode {opcode}, ignored.");
                         break;
                 }
             }

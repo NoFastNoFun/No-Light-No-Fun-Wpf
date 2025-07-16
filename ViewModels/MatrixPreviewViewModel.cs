@@ -26,8 +26,10 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
             get => _bitmap;
             set => SetProperty(ref _bitmap, value);
         }
-        private int _targetWidth = 128;
-        private int _targetHeight = 128;
+
+        // Remove hardcoded target width/height
+        // private int _targetWidth = 128;
+        // private int _targetHeight = 128;
 
         private readonly Dictionary<int, Color> _currentColors = new();
         private readonly Dictionary<int, DateTime> _lastUpdateTime = new();
@@ -63,22 +65,28 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
         }
 
         public void OnViewActivated() {
-            _entityMap = LoadFromJson(_targetWidth, _targetHeight);
-            if (_entityMap == null || _entityMap.Count == 0)
-                _entityMap = GenerateVirtualEntityMap();
-
+            // Always try to load from JSON or patch
+            _entityMap = LoadFromJsonOrPatch();
+            if (_entityMap == null || _entityMap.Count == 0) {
+                ShowError("Entity map is empty or invalid. Please load a valid layout.");
+                return;
+            }
             BuildPixelsFromMap();
         }
 
         private void BuildPixelsFromMap() {
+            if (_entityMap == null || _entityMap.Count == 0) {
+                ShowError("Entity map is empty or invalid. Please load a valid layout.");
+                return;
+            }
             int maxX = (int)_entityMap.Values.Max(p => p.X);
             int maxY = (int)_entityMap.Values.Max(p => p.Y);
-            InitializeBitmap();
+            InitializeBitmap(maxX + 1, maxY + 1);
         }
 
-        private void InitializeBitmap() {
-            _bitmapWidth = _targetWidth;
-            _bitmapHeight = _targetHeight;
+        private void InitializeBitmap(int width, int height) {
+            _bitmapWidth = width;
+            _bitmapHeight = height;
             _stride = (_bitmapWidth * _pixelFormat.BitsPerPixel + 7) / 8;
 
             Bitmap = new WriteableBitmap(
@@ -101,83 +109,29 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
 
         public void HandleUpdateMessage(UpdateMessage msg) {
             Application.Current.Dispatcher.Invoke(() => {
-                if (Bitmap == null)
+                if (Bitmap == null || _entityMap == null || _entityMap.Count == 0)
                     return;
                 Bitmap.Lock();
-
+                // Clear the bitmap
                 unsafe {
                     IntPtr pBackBuffer = Bitmap.BackBuffer;
-                    DateTime now = DateTime.UtcNow;
-
-                    // 1. Mettre à jour les entités du message
-                    foreach (var px in msg.Pixels) {
-                        if (!_entityMap.TryGetValue(px.Entity, out var pos))
-                            continue;
-
-                        var newColor = Color.FromRgb(px.R, px.G, px.B);
-
-                        bool shouldRedraw = !_currentColors.TryGetValue(px.Entity, out var current) || current != newColor;
-
-                        if (shouldRedraw) {
-                            _currentColors[px.Entity] = newColor;
-                            _lastUpdateTime[px.Entity] = now;
-
-                            int x = (int)(pos.X * pixelSize);
-                            int y = (int)(pos.Y * pixelSize);
-
-                            if (x >= 0 && y >= 0 && x < _bitmapWidth && y < _bitmapHeight) {
-                                int colorInt = (px.B) | (px.G << 8) | (px.R << 16);
-
-                                for (int dx = 0; dx < pixelSize; dx++) {
-                                    for (int dy = 0; dy < pixelSize; dy++) {
-                                        int pxX = x + dx;
-                                        int pxY = y + dy;
-
-                                        if (pxX < _bitmapWidth && pxY < _bitmapHeight) {
-                                            int offset = pxY * _stride + pxX * 4;
-                                            *((int*)((byte*)pBackBuffer + offset)) = colorInt;
-                                        }
-                                    }
-                                }
+                    System.Buffer.MemoryCopy(new byte[_bitmapWidth * _bitmapHeight * 4], (void*)pBackBuffer, _bitmapWidth * _bitmapHeight * 4, _bitmapWidth * _bitmapHeight * 4);
+                }
+                // Draw each pixel at its mapped position
+                foreach (var px in msg.Pixels) {
+                    if (_entityMap.TryGetValue(px.Entity, out var pos)) {
+                        int x = (int)pos.X;
+                        int y = (int)pos.Y;
+                        if (x >= 0 && x < _bitmapWidth && y >= 0 && y < _bitmapHeight) {
+                            unsafe {
+                                IntPtr pBackBuffer = Bitmap.BackBuffer;
+                                int colorData = (px.B << 16) | (px.G << 8) | (px.R);
+                                int offset = (y * _bitmapWidth + x) * 4;
+                                System.Runtime.InteropServices.Marshal.WriteInt32(pBackBuffer, offset, colorData);
                             }
-                        }
-                        else {
-                            _lastUpdateTime[px.Entity] = now; // même couleur, on rafraîchit juste le TTL
-                        }
-                    }
-
-                    // 2. Éteindre les pixels expirés
-                    var toExpire = new List<int>();
-                    foreach (var kv in _lastUpdateTime) {
-                        if ((now - kv.Value).TotalMilliseconds > TTL_MS)
-                            toExpire.Add(kv.Key);
-                    }
-
-                    foreach (var entity in toExpire) {
-                        if (_entityMap.TryGetValue(entity, out var pos)) {
-                            int x = (int)(pos.X * pixelSize);
-                            int y = (int)(pos.Y * pixelSize);
-
-                            if (x >= 0 && y >= 0 && x < _bitmapWidth && y < _bitmapHeight) {
-                                for (int dx = 0; dx < pixelSize; dx++) {
-                                    for (int dy = 0; dy < pixelSize; dy++) {
-                                        int pxX = x + dx;
-                                        int pxY = y + dy;
-
-                                        if (pxX < _bitmapWidth && pxY < _bitmapHeight) {
-                                            int offset = pxY * _stride + pxX * 4;
-                                            *((int*)((byte*)pBackBuffer + offset)) = 0x000000; // noir
-                                        }
-                                    }
-                                }
-                            }
-
-                            _currentColors[entity] = Colors.Black;
-                            _lastUpdateTime.Remove(entity); // plus actif
                         }
                     }
                 }
-
                 Bitmap.AddDirtyRect(new Int32Rect(0, 0, _bitmapWidth, _bitmapHeight));
                 Bitmap.Unlock();
             });
@@ -185,62 +139,43 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
 
 
         public void LoadJson() {
-            var map = LoadFromJson(_targetWidth, _targetHeight);
+            var map = LoadFromJsonOrPatch();
             if (map != null && map.Count > 0) {
                 _entityMap = map;
-                BuildPixelsFromMap(); // recrée bitmap selon le mapping
+                BuildPixelsFromMap(); // recreate bitmap according to mapping
+            } else {
+                ShowError("Failed to load entity map from JSON or patch.");
             }
         }
 
-        public static Dictionary<int, Point3D> LoadFromJson(int targetWidth, int targetHeight) {
-            var dialog = new OpenFileDialog {
-                Title = "Charger la configuration Unity",
-                Filter = "Fichiers JSON (*.json)|*.json"
+        private Dictionary<int, Point3D> LoadFromJsonOrPatch() {
+            // Try to load from JSON file first
+            var dialog = new Microsoft.Win32.OpenFileDialog {
+                Title = "Load LED Layout JSON",
+                Filter = "JSON Files (*.json)|*.json"
             };
-
             if (dialog.ShowDialog() == true) {
-                var json = File.ReadAllText(dialog.FileName);
-                var container = JsonConvert.DeserializeObject<EntityJsonContainer>(json);
-
-                if (container?.Pixels == null || container.Pixels.Count == 0)
-                    return new();
-
-                const int minEntity = 100;
-                const int maxEntity = 19858;
-
-                var filtered = container.Pixels
-                    .Where(p => p.Id >= minEntity && p.Id <= maxEntity)
-                    .ToList();
-
-                if (filtered.Count == 0) {
-                    Debug.WriteLine("[ERROR] Aucun pixel dans la plage d'entités sélectionnée.");
-                    return new();
+                try {
+                    var json = System.IO.File.ReadAllText(dialog.FileName);
+                    var container = Newtonsoft.Json.JsonConvert.DeserializeObject<EntityJsonContainer>(json);
+                    if (container?.Pixels != null && container.Pixels.Count > 0) {
+                        return container.Pixels.ToDictionary(p => p.Id, p => new Point3D(p.X, p.Y, 0));
+                    }
+                } catch {
+                    // Ignore and fallback
                 }
-
-                double minX = filtered.Min(p => p.X);
-                double maxX = filtered.Max(p => p.X);
-                double minY = filtered.Min(p => p.Y);
-                double maxY = filtered.Max(p => p.Y);
-
-                double rangeX = maxX - minX;
-                double rangeY = maxY - minY;
-
-
-
-                var map = filtered.ToDictionary(
-                        e => e.Id,
-                        e => new Point3D(
-                            ((e.X - minX) / rangeX) * (targetWidth - 1),
-                            ((1.0 - (e.Y - minY) / rangeY)) * (targetHeight - 1),
-                                0
-                        )
-                );
-                return map;
             }
-
-            return new();
+            // Fallback: try to use patch map
+            var patchMap = _patchMapManager.GetEntityToPositionMap();
+            if (patchMap != null && patchMap.Count > 0) {
+                return patchMap.ToDictionary(kvp => kvp.Key, kvp => new Point3D(kvp.Value.x, kvp.Value.y, 0));
+            }
+            return new Dictionary<int, Point3D>();
         }
 
+        private void ShowError(string message) {
+            System.Windows.MessageBox.Show(message, "Preview Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
 
 
         public static Dictionary<int, Point3D> GenerateVirtualEntityMap() {

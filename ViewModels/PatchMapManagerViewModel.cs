@@ -213,9 +213,78 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
             return map;
         }
 
-       
+        // Add: Generate entity map using backend's ledToXY logic
+        public static Dictionary<int, (int x, int y)> GenerateEntityMapLikeBackend()
+        {
+            // Constants from backend
+            const int gridW = 128;
+            const int gridH = 128;
+            const int ledsPerFull = 170; // even universe
+            const int ledsPerHalf = 85;  // odd universe
+            const int missingOdd = 3;    // last 3 LEDs physically absent
+            const int gapEven = 6;       // 6-pixel gap after even-universe lower strip
+            const int ledsPerPair = ledsPerFull + ledsPerHalf;
+            const int total = 16320; // Use the same total as backend
+            const int entityOffset = 100;
 
+            var map = new Dictionary<int, (int x, int y)>();
+
+            for (int idx = 0; idx < total; idx++)
+            {
+                int pair = idx / ledsPerPair;
+                int off = idx % ledsPerPair;
+                int row = pair * 2;
+                int x = 0, y = 0;
+                bool ok = false;
+
+                if (off < gridW)
+                {
+                    // top row (128 px)
+                    x = row;
+                    y = off;
+                    ok = true;
+                }
+                else
+                {
+                    off -= gridW; // 0‥126 in lower half
+                    if (off < ledsPerFull - gridW - gapEven)
+                    {
+                        // 36 px driven by even universe
+                        x = row + 1;
+                        y = off;
+                        ok = true;
+                    }
+                    else
+                    {
+                        off -= ledsPerFull - gridW - gapEven; // skip 6-px gap
+                        if (off >= ledsPerHalf - missingOdd)
+                        {
+                            // last 3 px of odd universe absent
+                            ok = false;
+                        }
+                        else
+                        {
+                            x = row + 1;
+                            y = (ledsPerFull - gridW - gapEven) + off;
+                            ok = true;
+                        }
+                    }
+                }
+                if (ok)
+                {
+                    int eid = idx + entityOffset;
+                    map[eid] = (x, y);
+                }
+            }
+            return map;
+        }
+
+        // In GetEntityToPositionMap, fallback to this if no entries
         public Dictionary<int, (int x, int y)> GetEntityToPositionMap() {
+            if (Entries.Count == 0)
+            {
+                return GenerateEntityMapLikeBackend();
+            }
             var map = new Dictionary<int, (int x, int y)>();
             foreach (var entry in Entries) {
                 System.Diagnostics.Debug.WriteLine($"Entry: Start={entry.EntityStart}, End={entry.EntityEnd}, X={entry.X}, Y={entry.Y}, Width={entry.Width}");
