@@ -12,6 +12,7 @@ namespace No_Fast_No_Fun_Wpf.Views.Controls
         public DmxMonitorControl()
         {
             InitializeComponent();
+            // blabal
             var viewModel = DataContext as DmxMonitorViewModel;
             if (viewModel != null) {
                 viewModel.Logs.CollectionChanged += (s, e) =>
