@@ -29,20 +29,11 @@
 
     <!-- DataTemplates pour associer ViewModel ↔ UserControl -->
     <Window.Resources>
-        <DataTemplate DataType="{x:Type vm:ConfigEditorViewModel}">
-            <controls:ConfigEditorControl/>
-        </DataTemplate>
-        <DataTemplate DataType="{x:Type vm:SystemSettingsPanelViewModel}">
-            <controls:SystemSettingsPanelControl/>
-        </DataTemplate>
         <DataTemplate DataType="{x:Type vm:MonitoringDashboardViewModel}">
             <controls:MonitoringDashboardControl/>
         </DataTemplate>
         <DataTemplate DataType="{x:Type vm:PatchMapManagerViewModel}">
             <controls:PatchMapManagerControl/>
-        </DataTemplate>
-        <DataTemplate DataType="{x:Type vm:ReceiverConfigPanelViewModel}">
-            <controls:ReceiverConfigPanelControl/>
         </DataTemplate>
         <DataTemplate DataType="{x:Type vm:DmxMonitorViewModel}">
             <controls:DmxMonitorControl/>
@@ -52,6 +43,9 @@
         </DataTemplate>
         <DataTemplate DataType="{x:Type vm:StreamManagerViewModel}">
             <controls:StreamManagerControl/>
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:ConfigEditorViewModel}">
+            <controls:ConfigEditorControl/>
         </DataTemplate>
 
     </Window.Resources>

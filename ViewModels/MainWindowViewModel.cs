@@ -1,7 +1,9 @@
 ﻿using System.Collections.ObjectModel;
 using System.Windows.Input;
 using System.Windows.Media.Media3D;
+using Core.Dtos;
 using Core.Messages;
+using Core.Models;
 using No_Fast_No_Fun_Wpf.Services.Network;
 using Services.Config;
 using Services.Matrix;
@@ -35,27 +37,22 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
 
         readonly Dictionary<string, BaseViewModel> _panelViewModels;
 
+
         public MainWindowViewModel(UdpListenerService listener, ArtNetDmxController artNetController) {
             _listener = listener;
             _listener.UniverseToListen = selectedUniverse;
             _listener.Start(selectedPort);
             _artNetController = artNetController;
 
-            // Services de settings
-            var settingsService = new SettingsService();
-            var patchVm = new PatchMapManagerViewModel();
-            var routersVm = new ReceiverConfigPanelViewModel();
-            var settingsVm = new SystemSettingsPanelViewModel(_listener, patchVm, routersVm);
+            var configService = new JsonFileConfigService<AppConfigDto>("app_config.json");
+            var appConfig = configService.Load();
 
-
-            // Génération cohérente des univers + patch map dynamiques
-            var routers = routersVm.Routers.Select(vm => vm.ToModel()).ToList();
-            var patchEntries = patchVm.Entries.Select(vm => vm.ToModel()).ToList();
-
+            var patchVm = new PatchMapManagerViewModel(appConfig);
+           
 
             var routingService = new DmxRoutingService(
-                routers,
-                patchEntries,
+                appConfig.Routers.Select(dto => DmxRouterSettings.FromDto(dto)),
+                appConfig.PatchMap,
                 _artNetController
             );
 
@@ -63,25 +60,18 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
             _previewVm = previewVm;
 
 
-
-            // Routing eHub → DMX
-            _listener.OnUpdatePacket += (UpdateMessage pkt)
-                => routingService.RouteUpdate(pkt);
-           
-
             // Dictionnaire d’onglets
             _panelViewModels = new Dictionary<string, BaseViewModel> {
-        { "Settings", settingsVm },
         { "Configuration", new ConfigEditorViewModel() },
         { "Monitoring", new MonitoringDashboardViewModel(_listener) },
         { "PatchMap", patchVm },
-        { "Receivers", routersVm },
         { "Streams", new StreamManagerViewModel() },
         { "Preview", previewVm },
         { "DMX Monitor", new DmxMonitorViewModel(_artNetController) },
-        { "DMX Routers", routersVm }
+         
     };
             // Routing eHub → Preview
+            _listener.OnUpdatePacket += routingService.RouteUpdate;
             _listener.OnUpdatePacket += previewVm.HandleUpdateMessage;
 
             // Initialisation des onglets

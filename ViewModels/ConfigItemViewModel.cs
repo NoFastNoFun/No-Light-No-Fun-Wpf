@@ -5,7 +5,7 @@ using Core.Models;
 namespace No_Fast_No_Fun_Wpf.ViewModels {
     public class ConfigItemViewModel : INotifyPropertyChanged {
         ushort _startEntityId, _endEntityId;
-        byte _startUniverse, _endUniverse;
+        byte _universe;
         string _controllerIp = "0.0.0.0";
 
         public ushort StartEntityId {
@@ -16,13 +16,9 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
             get => _endEntityId;
             set => Set(ref _endEntityId, value);
         }
-        public byte StartUniverse {
-            get => _startUniverse;
-            set => Set(ref _startUniverse, value);
-        }
-        public byte EndUniverse {
-            get => _endUniverse;
-            set => Set(ref _endUniverse, value);
+        public byte Universe {
+            get => _universe;
+            set => Set(ref _universe, value);
         }
         public string ControllerIp {
             get => _controllerIp;
@@ -35,15 +31,12 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
         public ConfigItemViewModel(ConfigItem model) {
             StartEntityId = model.StartEntityId;
             EndEntityId = model.EndEntityId;
-            StartUniverse = model.StartUniverse;
-            EndUniverse = model.EndUniverse;
+            Universe = model.Universe;
             ControllerIp = model.ControllerIp;
         }
 
         public ConfigItem ToModel() =>
-            new ConfigItem(StartEntityId, EndEntityId,
-                           StartUniverse, EndUniverse,
-                           ControllerIp);
+            new ConfigItem(StartEntityId, EndEntityId, Universe, ControllerIp);
 
         public event PropertyChangedEventHandler? PropertyChanged;
         void Set<T>(ref T field, T value, [CallerMemberName] string? prop = null) {

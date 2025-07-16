@@ -1,90 +1,69 @@
-﻿using System.ComponentModel;
-using System.Runtime.CompilerServices;
-using Core.Dtos;
+﻿using Core.Dtos;
 using Core.Models;
 
 namespace No_Fast_No_Fun_Wpf.ViewModels {
-    public class UniverseMapViewModel : INotifyPropertyChanged {
-        readonly UniverseMap _model;
-        public UniverseMapViewModel(UniverseMap model) => _model = model;
-
+    public class UniverseMapViewModel : BaseViewModel {
+        private int _entityIdStart;
         public int EntityIdStart {
-            get => _model.EntityIdStart;
-            set {
-                if (_model.EntityIdStart != value) {
-                    _model.EntityIdStart = value;
-                    OnPropertyChanged();
-                }
-            }
+            get => _entityIdStart;
+            set => SetProperty(ref _entityIdStart, value);
         }
 
+        private int _entityIdEnd;
         public int EntityIdEnd {
-            get => _model.EntityIdEnd;
-            set {
-                if (_model.EntityIdEnd != value) {
-                    _model.EntityIdEnd = value;
-                    OnPropertyChanged();
-                }
-            }
+            get => _entityIdEnd;
+            set => SetProperty(ref _entityIdEnd, value);
         }
 
-        public byte UniverseStart {
-            get => _model.UniverseStart;
-            set {
-                if (_model.UniverseStart != value) {
-                    _model.UniverseStart = value;
-                    OnPropertyChanged();
-                }
-            }
+        private byte _universe;
+        public byte Universe {
+            get => _universe;
+            set => SetProperty(ref _universe, value);
         }
 
-        public byte UniverseEnd {
-            get => _model.UniverseEnd;
-            set {
-                if (_model.UniverseEnd != value) {
-                    _model.UniverseEnd = value;
-                    OnPropertyChanged();
-                }
-            }
-        }
-
+        private int _startAddress;
         public int StartAddress {
-            get => _model.StartAddress;
-            set {
-                // Vérifie que c’est bien un multiple de 3 et dans la plage DMX
-                if (value % 3 != 0 || value < 0 || value > 509) {
-                    // Tu peux lever une exception ou juste ignorer ici
-                    Console.WriteLine($"[WARNING] StartAddress invalide : {value} (doit être multiple de 3 et <= 509)");
-                    return;
-                }
-
-                if (_model.StartAddress != value) {
-                    _model.StartAddress = value;
-                    OnPropertyChanged();
-                }
-            }
+            get => _startAddress;
+            set => SetProperty(ref _startAddress, value);
         }
 
-        public event PropertyChangedEventHandler? PropertyChanged;
-        void OnPropertyChanged([CallerMemberName] string? n = null)
-          => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
+        // Constructeur "empty" pour ajout manuel (DataGrid etc)
+        public UniverseMapViewModel() {
+        }
 
+        // Constructeur depuis UniverseMapDto (chargement depuis fichier JSON)
+        public UniverseMapViewModel(UniverseMapDto dto) {
+            EntityIdStart = dto.EntityStart;
+            EntityIdEnd = dto.EntityEnd;
+            Universe = dto.Universe;
+            StartAddress = dto.StartAddress;
+        }
+
+        // Constructeur depuis le modèle (optionnel, pour logique avancée)
+        public UniverseMapViewModel(UniverseMap model) {
+            EntityIdStart = model.EntityIdStart;
+            EntityIdEnd = model.EntityIdEnd;
+            Universe = model.Universe;
+            StartAddress = model.StartAddress;
+        }
+
+        // Conversion vers DTO pour sauvegarde
         public UniverseMapDto ToDto() {
             return new UniverseMapDto {
-                EntityStart = _model.EntityIdStart,
-                EntityEnd = _model.EntityIdEnd,
-                UniverseStart = _model.UniverseStart,
-                UniverseEnd = _model.UniverseEnd,
-                StartAddress = _model.StartAddress
+                EntityStart = this.EntityIdStart,
+                EntityEnd = this.EntityIdEnd,
+                Universe = this.Universe,
+                StartAddress = this.StartAddress
             };
         }
 
+        // Conversion vers modèle (si tu en as besoin en code backend)
         public UniverseMap ToModel() {
             return new UniverseMap {
-                EntityIdStart = _model.EntityIdStart,
-                EntityIdEnd = _model.EntityIdEnd,
-                UniverseStart = _model.UniverseStart,
-                UniverseEnd = _model.UniverseEnd,
+                EntityIdStart = this.EntityIdStart,
+                EntityIdEnd = this.EntityIdEnd,
+                Universe = this.Universe,
+                StartAddress = this.StartAddress
             };
         }
     }

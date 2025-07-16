@@ -7,9 +7,7 @@ using System.IO;
 
 namespace No_Fast_No_Fun_Wpf.ViewModels {
     public class PatchMapManagerViewModel : BaseViewModel {
-        readonly IJsonFileService<PatchMapDto> _patchService;
-
-
+        private readonly AppConfigDto _config;
         public ObservableCollection<PatchMapEntryViewModel> Entries {
             get;
         }
@@ -38,9 +36,13 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
             set => SetProperty(ref _selected, value);
         }
 
-        public PatchMapManagerViewModel() {
-            _patchService = new JsonFileConfigService<PatchMapDto>("patchmap.json");
+        public PatchMapManagerViewModel(AppConfigDto appConfigDto) {
+            _config = appConfigDto;
             Entries = new ObservableCollection<PatchMapEntryViewModel>();
+            if (_config.PatchMap != null)
+                foreach (var patch in _config.PatchMap)
+                    Entries.Add(new PatchMapEntryViewModel(patch));
+
             var path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "patchmap.csv");
             if (!File.Exists(path)) {
                 var template = new[] {
@@ -49,38 +51,42 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
                     "5100,10099,32,63",
                     "10100,15199,64,95",
                     "15200,19858,96,127"
-
-};
-
+                };
                 File.WriteAllLines(path, template);
             }
 
             LoadCommand = new RelayCommand(_ => Load());
             SaveCommand = new RelayCommand(_ => Save());
-            AddCommand = new RelayCommand(_ => Entries.Add(new PatchMapEntryViewModel()));
-            DeleteCommand = new RelayCommand(_ => {
-                if (SelectedEntry != null)
-                    Entries.Remove(SelectedEntry);
-            }, _ => SelectedEntry != null);
+            AddCommand = new RelayCommand(_ => AddEntry());
+            DeleteCommand = new RelayCommand(_ => DeleteSelected(), _ => SelectedEntry != null);
             ImportCommand = new RelayCommand(_ => ImportCsv());
             ExportCommand = new RelayCommand(_ => ExportCsv(), _ => Entries.Any());
-
-            Load();
         }
 
         void Load() {
-            var dto = _patchService.Load(); // DTO doit contenir List<PatchMapEntryDto>
             Entries.Clear();
-            foreach (var model in dto.Items)
-                Entries.Add(new PatchMapEntryViewModel(model));
+            if (_config.PatchMap != null)
+                foreach (var model in _config.PatchMap)
+                    Entries.Add(new PatchMapEntryViewModel(model));
         }
 
         void Save() {
-            var dto = new PatchMapDto {
-                Items = Entries.Select(vm => vm.ToModel()).ToList()
-            };
-            _patchService.Save(dto);
+            _config.PatchMap = Entries.Select(vm => vm.ToModel()).ToList();
         }
+
+        void AddEntry() {
+            var entry = new PatchMapEntryViewModel();
+            Entries.Add(entry);
+            Save(); // Synchronise
+        }
+
+        void DeleteSelected() {
+            if (SelectedEntry != null) {
+                Entries.Remove(SelectedEntry);
+                Save();
+            }
+        }
+
         private void ImportCsv() {
             var dlg = new OpenFileDialog {
                 Title = "Importer un patch map CSV",
@@ -91,40 +97,32 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
                 return;
 
             var lines = File.ReadAllLines(dlg.FileName)
-                            // ignore les lignes vides
-                            .Where(l => !string.IsNullOrWhiteSpace(l))
-                            .ToArray();
+                .Where(l => !string.IsNullOrWhiteSpace(l))
+                .ToArray();
             if (lines.Length <= 1)
-                return;  // pas de données
+                return;
 
-            // Optionnel : vérifier que l'en-tête correspond
             var header = lines[0].Split(',').Select(h => h.Trim()).ToArray();
             if (header.Length < 4 ||
                 header[0] != "EntityStart" ||
                 header[1] != "EntityEnd" ||
                 header[2] != "UniverseStart" ||
-                header[3] != "UniverseEnd") {
-                // l’en-tête ne matche pas ce qu’on attend : on peut logguer ou échouer
+                header[3] != "UniverseEnd")
                 return;
-            }
 
             Entries.Clear();
+            var imported = new List<PatchMapEntryDto>();
 
             foreach (var line in lines.Skip(1)) {
-                var parts = line.Split(',')
-                                .Select(p => p.Trim())
-                                .ToArray();
+                var parts = line.Split(',').Select(p => p.Trim()).ToArray();
                 if (parts.Length != 4)
                     continue;
 
-                // Essaie de parser chaque colonne
                 if (!int.TryParse(parts[0], out var entityStart) ||
                     !int.TryParse(parts[1], out var entityEnd) ||
                     !byte.TryParse(parts[2], out var universeStart) ||
-                    !byte.TryParse(parts[3], out var universeEnd)) {
-                    // Si un parse échoue, on skip cette ligne
+                    !byte.TryParse(parts[3], out var universeEnd))
                     continue;
-                }
 
                 var dto = new PatchMapEntryDto {
                     EntityStart = entityStart,
@@ -132,9 +130,13 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
                     UniverseStart = universeStart,
                     UniverseEnd = universeEnd
                 };
+                imported.Add(dto);
                 Entries.Add(new PatchMapEntryViewModel(dto));
             }
+
+            _config.PatchMap = imported;
         }
+
         private void ExportCsv() {
             var dlg = new SaveFileDialog {
                 Title = "Exporter un patch map CSV",
@@ -144,22 +146,22 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
             if (dlg.ShowDialog() != true)
                 return;
 
-            // Prépare les lignes
-            var lines = new List<string>
-            {
-            "EntityStart,EntityEnd,UniverseStart,UniverseEnd"
-        };
+            var lines = new List<string> {
+                "EntityStart,EntityEnd,UniverseStart,UniverseEnd"
+            };
             foreach (var vm in Entries) {
-                var m = vm.ToModel(); // retourne un PatchMapEntryDto
+                var m = vm.ToModel();
                 lines.Add($"{m.EntityStart},{m.EntityEnd},{m.UniverseStart},{m.UniverseEnd}");
             }
 
             File.WriteAllLines(dlg.FileName, lines);
         }
+
         public void SetEntries(List<PatchMapEntryDto> entries) {
             Entries.Clear();
             foreach (var entry in entries)
                 Entries.Add(new PatchMapEntryViewModel(entry));
+            Save();
         }
 
         public List<PatchMapEntryDto> ToDto() {

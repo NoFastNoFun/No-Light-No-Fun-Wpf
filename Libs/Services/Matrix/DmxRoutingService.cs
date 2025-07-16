@@ -3,17 +3,16 @@ using Core.Models;
 using Core.Messages;
 using System.Collections.Concurrent;
 using System.Diagnostics;
-
+using System.Linq;
 
 namespace Services.Matrix {
     public class DmxRoutingService {
-        readonly IEnumerable<DmxRouterSettings> _routers;
-        readonly IEnumerable<PatchMapEntryDto> _patches;
-        readonly ArtNetDmxController _artNet;
+        private readonly IEnumerable<DmxRouterSettings> _routers;
+        private readonly IEnumerable<PatchMapEntryDto> _patches;
+        private readonly ArtNetDmxController _artNet;
 
         private readonly ConcurrentDictionary<(string ip, byte universe), byte[]> _buffers
             = new ConcurrentDictionary<(string ip, byte universe), byte[]>();
-
 
         public DmxRoutingService(
             IEnumerable<DmxRouterSettings> routers,
@@ -25,7 +24,6 @@ namespace Services.Matrix {
         }
 
         public void RouteUpdate(UpdateMessage packet) {
-          
             _buffers.Clear();
 
             int pixelsRoutés = 0;
@@ -34,7 +32,7 @@ namespace Services.Matrix {
             foreach (Pixel pix in packet.Pixels) {
                 int entityId = pix.Entity;
 
-                // 1) Patch correspondant
+                // 1) Recherche du patch correspondant (PatchMap)
                 var patch = _patches.FirstOrDefault(p =>
                     entityId >= p.EntityStart && entityId <= p.EntityEnd);
                 if (patch == null) {
@@ -48,41 +46,36 @@ namespace Services.Matrix {
                 int totalUni = patch.UniverseEnd - patch.UniverseStart + 1;
                 byte universe = (byte)(patch.UniverseStart + (relIndex * totalUni) / totalEnt);
 
-                // 3) Routeur gérant cette entité
-                // Ajoute ce debug juste avant le FirstOrDefault
-                foreach (var r in _routers)
-                    foreach (var u in r.Universes)
-                        if (entityId >= u.EntityIdStart && entityId <= u.EntityIdEnd &&
-                            universe >= u.UniverseStart && universe <= u.UniverseEnd)
-                            ;
-                           
-                            
-
+                // 3) Recherche du routeur gérant ce range ET cet univers
                 var router = _routers.FirstOrDefault(r =>
                     r.Universes.Any(u =>
                         entityId >= u.EntityIdStart &&
                         entityId <= u.EntityIdEnd &&
-                        universe >= u.UniverseStart &&
-                        universe <= u.UniverseEnd));
+                        universe >= u.Universe));
                 if (router == null) {
                     pixelsIgnorés++;
                     continue;
                 }
 
-                // 4) Buffer DMX
+                // 4) Buffer DMX (ip/universe)
                 var key = (router.Ip, universe);
                 var buf = _buffers.GetOrAdd(key, _ => new byte[512]);
 
-                // 5) Mapping interne
-                var map = router.Universes.First(u =>
+                // 5) Mapping interne (offset DMX)
+                var map = router.Universes.FirstOrDefault(u =>
                     entityId >= u.EntityIdStart &&
                     entityId <= u.EntityIdEnd &&
-                    universe >= u.UniverseStart &&
-                    universe <= u.UniverseEnd);
+                    universe >= u.Universe);
+
+                if (map == null) {
+                    pixelsIgnorés++;
+                    continue;
+                }
 
                 int pixelIndex = entityId - map.EntityIdStart;
                 int dmxOffset = map.StartAddress + pixelIndex * 3;
 
+                // 6) Sûreté de l’offset
                 if (dmxOffset + 2 < 512) {
                     buf[dmxOffset + 0] = pix.R;
                     buf[dmxOffset + 1] = pix.G;
@@ -92,21 +85,12 @@ namespace Services.Matrix {
                 else {
                     pixelsIgnorés++;
                 }
-
             }
 
-            // 6) Univers préparés
-            foreach (var kv in _buffers) {
-                var (ip, uni) = kv.Key;
-            
-            }
-
-            // 7) Envoi ArtNet
+            // 7) Envoi ArtNet (par ip/universe)
             foreach (var kv in _buffers) {
                 var (ip, uni) = kv.Key;
                 var data = kv.Value;
-
-               
                 _artNet.SendDmxFrame(ip, 6454, uni, data);
             }
 
@@ -114,4 +98,3 @@ namespace Services.Matrix {
         }
     }
 }
-

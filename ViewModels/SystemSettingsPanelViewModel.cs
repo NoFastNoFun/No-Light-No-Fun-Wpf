@@ -1,5 +1,4 @@
 ﻿using System.Collections.ObjectModel;
-using System.Linq;
 using System.Windows.Input;
 using Core.Dtos;
 using No_Fast_No_Fun_Wpf.Services.Network;
@@ -10,7 +9,7 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
         private readonly UdpListenerService _listener;
         private readonly IJsonFileService<AppConfigDto> _jsonService;
         private readonly PatchMapManagerViewModel _patchVm;
-        private readonly ReceiverConfigPanelViewModel _routerVm;
+        private readonly AppConfigDto _appConfig;
         public ObservableCollection<string> Logs {
             get;
         }
@@ -40,11 +39,11 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
         public SystemSettingsPanelViewModel(
             UdpListenerService listener,
             PatchMapManagerViewModel patchVm,
-            ReceiverConfigPanelViewModel routerVm
+            AppConfigDto appConfig
         ) {
             _listener = listener;
             _patchVm = patchVm;
-            _routerVm = routerVm;
+            _appConfig = appConfig;
             _jsonService = new JsonFileConfigService<AppConfigDto>("app_config.json");
 
             Logs = new ObservableCollection<string>();
@@ -60,7 +59,6 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
                 Logs.Add($"[{DateTime.Now:HH:mm:ss}] Erreur : Port invalide ({SelectedPort})");
                 return;
             }
-
             _listener.Stop();
             _listener.UniverseToListen = SelectedUniverse;
             _listener.Start(SelectedPort);
@@ -68,37 +66,23 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
         }
 
         private void Save() {
-            // Génère le PatchMap directement à partir des univers déclarés dans les routeurs
-            var patchMap = _routerVm.Routers
-                .SelectMany(routerVm => routerVm.Universes.Select(u => new PatchMapEntryDto {
-                    EntityStart = u.EntityIdStart,
-                    EntityEnd = u.EntityIdEnd,
-                    UniverseStart = u.UniverseStart,
-                    UniverseEnd = u.UniverseEnd,
-                    X = 0,         
-                    Y = 0,
-                    Width = 128   
-                }))
-                .OrderBy(e => e.EntityStart) 
-                .ToList();
-
-            var dto = new AppConfigDto {
-                ListeningPort = SelectedPort,
-                ListeningUniverse = SelectedUniverse,
-                PatchMap = patchMap,
-                Routers = _routerVm.Routers.Select(r => r.ToDto()).ToList()
-            };
-            _jsonService.Save(dto);
-            Logs.Add($"[{DateTime.Now:HH:mm:ss}] Paramètres sauvegardés (PatchMap auto-généré depuis les routeurs)");
+            _appConfig.ListeningPort = SelectedPort;
+            _appConfig.ListeningUniverse = SelectedUniverse;
+            _appConfig.PatchMap = _patchVm.ToDto(); // on sauvegarde ce qui est dans le patch manager
+            // Si tu veux synchroniser d'autres parties du DTO ici, fais-le.
+            _jsonService.Save(_appConfig);
+            Logs.Add($"[{DateTime.Now:HH:mm:ss}] Paramètres sauvegardés.");
         }
-
 
         private void Load() {
             var dto = _jsonService.Load();
             SelectedPort = dto.ListeningPort;
             SelectedUniverse = dto.ListeningUniverse;
             _patchVm.SetEntries(dto.PatchMap);
-            _routerVm.SetRouters(dto.Routers);
+            // Si tu veux resynchroniser _appConfig :
+            _appConfig.ListeningPort = dto.ListeningPort;
+            _appConfig.ListeningUniverse = dto.ListeningUniverse;
+            _appConfig.PatchMap = dto.PatchMap;
             Logs.Add($"[{DateTime.Now:HH:mm:ss}] Paramètres chargés");
         }
     }
