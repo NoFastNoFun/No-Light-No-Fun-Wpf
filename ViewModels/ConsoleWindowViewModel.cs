@@ -3,33 +3,33 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Media3D;
 using Core.Messages;
-using Core.Models;
 using Microsoft.Win32;
 using No_Fast_No_Fun_Wpf.Services.Network;
 using Services.Matrix;
 using OpenCvSharp;
+using Core.Models;
 
 namespace No_Fast_No_Fun_Wpf.ViewModels {
     public class ConsoleWindowViewModel : BaseViewModel {
         private readonly UdpListenerService _listener;
         private readonly DmxRoutingService _routingService;
         private readonly Dictionary<int, Point3D> _entityMap;
+        private readonly PatchMapManagerViewModel _patchMapManager;
+        private readonly ConfigEditorViewModel _configEditor;
+
         private CancellationTokenSource? _mediaCancellation;
         private CancellationTokenSource? _videoCancellation;
-        private readonly PatchMapManagerViewModel _patchMapManager;
-
         private System.Timers.Timer? _rainbowTimer;
         private double _frame = 0;
+
         public int FromEntity {
             get => _from;
             set => SetProperty(ref _from, value);
         }
-
         public int ToEntity {
             get => _to;
             set => SetProperty(ref _to, value);
         }
-
         public byte Brightness {
             get => _brightness;
             set {
@@ -37,7 +37,6 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
                 UpdateEffectiveColor();
             }
         }
-
         public Color SelectedColor {
             get => _selectedColor;
             set {
@@ -45,7 +44,6 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
                 UpdateEffectiveColor();
             }
         }
-
         public Color EffectiveColor {
             get => _effectiveColor;
             private set => SetProperty(ref _effectiveColor, value);
@@ -56,20 +54,26 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
                 SelectedColor = Color.FromRgb(value, SelectedColor.G, SelectedColor.B);
             }
         }
-
         public byte Green {
             get => SelectedColor.G;
             set {
                 SelectedColor = Color.FromRgb(SelectedColor.R, value, SelectedColor.B);
             }
         }
-
         public byte Blue {
             get => SelectedColor.B;
             set {
                 SelectedColor = Color.FromRgb(SelectedColor.R, SelectedColor.G, value);
             }
         }
+
+        private int _from = 100;
+        private int _to = 19858;
+        private byte _brightness = 255;
+        private readonly int _matrixWidth = 128;
+        private readonly int _matrixHeight = 128;
+        private Color _selectedColor = Colors.Red;
+        private Color _effectiveColor = Colors.Red;
 
         public ICommand StartRainbowCommand {
             get;
@@ -89,18 +93,25 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
         public ICommand StopMediaCommand {
             get;
         }
-        private int _from = 100;
-        private int _to = 19858;
-        private byte _brightness = 255;
-        private readonly int _matrixWidth = 128;
-        private readonly int _matrixHeight = 128;
-        private Color _selectedColor = Colors.Red;
-        private Color _effectiveColor = Colors.Red;
 
-        public ConsoleWindowViewModel(UdpListenerService listener, DmxRoutingService routingService, Dictionary<int, Point3D> entityMap, PatchMapManagerViewModel patchMapManager) {
+        private string _selectedMode = "Solid";
+        public string SelectedMode {
+            get => _selectedMode;
+            set => SetProperty(ref _selectedMode, value);
+        }
+        public List<string> Modes { get; } = new() { "Solid", "Blink", "Gradient" };
+
+        public ConsoleWindowViewModel(
+            UdpListenerService listener,
+            DmxRoutingService routingService,
+            Dictionary<int, Point3D> entityMap,
+            PatchMapManagerViewModel patchMapManager,
+            ConfigEditorViewModel configEditor) {
             _listener = listener;
             _routingService = routingService;
             _entityMap = entityMap;
+            _patchMapManager = patchMapManager;
+            _configEditor = configEditor;
 
             SendToPreviewCommand = new RelayCommand(_ => SendToPreview());
             SendToMatrixCommand = new RelayCommand(_ => SendToMatrix());
@@ -110,7 +121,6 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
             StopMediaCommand = new RelayCommand(_ => StopMedia());
 
             UpdateEffectiveColor();
-            _patchMapManager = patchMapManager;
         }
 
         private void UpdateEffectiveColor() {
@@ -122,44 +132,29 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
 
         private UpdateMessage BuildUpdateMessage() {
             var pixels = new List<Pixel>();
-
-            foreach (var entry in _patchMapManager.Entries) {
-                for (int i = entry.EntityStart; i <= entry.EntityEnd; i++) {
-                    pixels.Add(new Pixel((ushort)i, EffectiveColor.R, EffectiveColor.G, EffectiveColor.B));
+            foreach (var config in _configEditor.ConfigItems) {
+                for (int i = config.StartEntityId; i <= config.EndEntityId; i++) {
+                    if (_entityMap.ContainsKey(i))
+                        pixels.Add(new Pixel((ushort)i, EffectiveColor.R, EffectiveColor.G, EffectiveColor.B));
                 }
             }
             return new UpdateMessage(pixels);
         }
 
-
-
         private void SendToPreview() {
             var msg = BuildUpdateMessage();
             _listener.SimulateUpdate(msg);
-
         }
 
         private void SendToMatrix() {
             var msg = BuildUpdateMessage();
             _routingService?.RouteUpdate(msg);
         }
-        private string _selectedMode = "Solid";
-        public string SelectedMode {
-            get => _selectedMode;
-            set => SetProperty(ref _selectedMode, value);
-        }
-
-        public List<string> Modes {
-            get;
-        } = new() {
-                "Solid", "Blink", "Gradient"
-                  };
 
         private void StartRainbowAnimation() {
             _rainbowTimer?.Stop();
-
             _frame = 0;
-            _rainbowTimer = new System.Timers.Timer(1000.0 / 60.0); // pour calculer les fps il faut 1000ms / par le nombre de fps voulu
+            _rainbowTimer = new System.Timers.Timer(1000.0 / 60.0);
             _rainbowTimer.Elapsed += (s, e) => {
                 var msg = BuildRainbowMessage(_frame);
                 _listener.SimulateUpdate(msg);
@@ -168,6 +163,12 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
             };
             _rainbowTimer.Start();
         }
+        private void StopRainbowAnimation() {
+            _rainbowTimer?.Stop();
+            _rainbowTimer?.Dispose();
+            _rainbowTimer = null;
+        }
+
         private UpdateMessage BuildRainbowMessage(double frameOffset) {
             var pixels = new List<Pixel>();
             ushort start = (ushort)FromEntity;
@@ -178,11 +179,12 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
                 double hue = (i * 360.0 / count + frameOffset) % 360;
                 var color = HsvToRgb(hue, 1, 1);
                 ushort entity = (ushort)(start + i);
-                pixels.Add(new Pixel(entity, color.R, color.G, color.B));
+                if (_entityMap.ContainsKey(entity))
+                    pixels.Add(new Pixel(entity, color.R, color.G, color.B));
             }
-
             return new UpdateMessage(pixels);
         }
+
         private Color HsvToRgb(double h, double s, double v) {
             h = h % 360;
             int i = (int)(h / 60);
@@ -192,7 +194,6 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
             double t = v * (1 - (1 - f) * s);
 
             double r = 0, g = 0, b = 0;
-
             switch (i % 6) {
                 case 0:
                     r = v;
@@ -225,58 +226,37 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
                     b = q;
                     break;
             }
-
             return Color.FromRgb((byte)(r * 255), (byte)(g * 255), (byte)(b * 255));
-        }
-
-        private void StopRainbowAnimation() {
-            _rainbowTimer?.Stop();
-            _rainbowTimer?.Dispose();
-            _rainbowTimer = null;
-        }
-        private void StopMedia() {
-            _mediaCancellation?.Cancel();
-            _mediaCancellation = null;
-            _videoCancellation?.Cancel();
-            _videoCancellation = null;
         }
 
         private void LoadMediaFile() {
             var dialog = new OpenFileDialog {
                 Filter = "Images and Videos|*.png;*.jpg;*.bmp;*.gif;*.mp4;*.avi"
             };
-
             if (dialog.ShowDialog() == true) {
                 string path = dialog.FileName;
-                // À ce stade, tu dispatches la suite du traitement :
                 _ = ProcessMediaFile(path);
             }
         }
         private async Task ProcessMediaFile(string path) {
-            if (path.EndsWith(".gif")) {
+            if (path.EndsWith(".gif"))
                 await PlayGif(path);
-            }
-            else if (path.EndsWith(".mp4") || path.EndsWith(".avi")) {
+            else if (path.EndsWith(".mp4") || path.EndsWith(".avi"))
                 await PlayVideo(path);
-            }
-            else {
+            else
                 await SendImageFrame(path);
-            }
         }
 
         private async Task SendImageFrame(string path) {
             using var bitmap = new System.Drawing.Bitmap(path);
-
             var resized = new System.Drawing.Bitmap(_matrixWidth, _matrixHeight);
-            using (var g = System.Drawing.Graphics.FromImage(resized)) {
+            using (var g = System.Drawing.Graphics.FromImage(resized))
                 g.DrawImage(bitmap, 0, 0, _matrixWidth, _matrixHeight);
-            }
 
             var pixels = new List<Pixel>();
             foreach (var kvp in _entityMap) {
                 int entityId = kvp.Key;
                 var pos = kvp.Value;
-
                 int x = (int)pos.X;
                 int y = (int)pos.Y;
                 if (x >= 0 && x < resized.Width && y >= 0 && y < resized.Height) {
@@ -284,42 +264,34 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
                     pixels.Add(new Pixel((ushort)entityId, color.R, color.G, color.B));
                 }
             }
-
             var updateMsg = new UpdateMessage(pixels);
-
             _listener.SimulateUpdate(updateMsg);
             _routingService.RouteUpdate(updateMsg);
         }
 
-
-
         private async Task PlayGif(string path) {
-            StopMedia(); // Stoppe une animation précédente si elle tourne
-
+            StopMedia();
             _mediaCancellation = new CancellationTokenSource();
             var token = _mediaCancellation.Token;
 
             using var gif = System.Drawing.Image.FromFile(path);
             var dimension = new System.Drawing.Imaging.FrameDimension(gif.FrameDimensionsList[0]);
             int frameCount = gif.GetFrameCount(dimension);
-            int delayMs = 1000 / 60; // 60 FPS par défaut
+            int delayMs = 1000 / 60;
 
             try {
                 while (!token.IsCancellationRequested) {
                     for (int i = 0; i < frameCount; i++) {
                         gif.SelectActiveFrame(dimension, i);
-
                         using var frame = new System.Drawing.Bitmap(gif);
                         var resized = new System.Drawing.Bitmap(_matrixWidth, _matrixHeight);
-                        using (var g = System.Drawing.Graphics.FromImage(resized)) {
+                        using (var g = System.Drawing.Graphics.FromImage(resized))
                             g.DrawImage(frame, 0, 0, _matrixWidth, _matrixHeight);
-                        }
 
                         var pixels = new List<Pixel>();
                         foreach (var kvp in _entityMap) {
                             int entityId = kvp.Key;
                             var pos = kvp.Value;
-
                             int x = (int)pos.X;
                             int y = (int)pos.Y;
                             if (x >= 0 && x < resized.Width && y >= 0 && y < resized.Height) {
@@ -327,12 +299,11 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
                                 pixels.Add(new Pixel((ushort)entityId, color.R, color.G, color.B));
                             }
                         }
-
                         var updateMsg = new UpdateMessage(pixels);
                         _listener.SimulateUpdate(updateMsg);
                         _routingService.RouteUpdate(updateMsg);
 
-                        await Task.Delay(delayMs, token); // interruption propre
+                        await Task.Delay(delayMs, token);
                     }
                 }
             }
@@ -341,9 +312,8 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
             }
         }
 
-
         private async Task PlayVideo(string path) {
-            StopMedia(); // Stoppe une vidéo ou GIF en cours
+            StopMedia();
             _videoCancellation = new CancellationTokenSource();
             var token = _videoCancellation.Token;
 
@@ -354,7 +324,6 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
             }
 
             int delay = (int)(1000.0 / 60);
-
             using var frame = new Mat();
 
             try {
@@ -363,7 +332,6 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
                         capture.Set(VideoCaptureProperties.PosFrames, 0);
                         continue;
                     }
-
                     using var resized = frame.Resize(new OpenCvSharp.Size(_matrixWidth, _matrixHeight));
                     var updateMsg = BuildUpdateFromMat(resized);
                     _listener.SimulateUpdate(updateMsg);
@@ -376,24 +344,27 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
                 Debug.WriteLine("Lecture de la vidéo arrêtée.");
             }
         }
+
         private UpdateMessage BuildUpdateFromMat(Mat mat) {
             var pixels = new List<Pixel>();
-
             foreach (var kvp in _entityMap) {
                 int entityId = kvp.Key;
                 var pos = kvp.Value;
-
                 int x = (int)pos.X;
                 int y = (int)pos.Y;
-
                 if (x >= 0 && x < mat.Width && y >= 0 && y < mat.Height) {
                     var color = mat.At<Vec3b>(y, x);
                     pixels.Add(new Pixel((ushort)entityId, color[2], color[1], color[0])); // BGR → RGB
                 }
             }
-
             return new UpdateMessage(pixels);
         }
 
+        private void StopMedia() {
+            _mediaCancellation?.Cancel();
+            _mediaCancellation = null;
+            _videoCancellation?.Cancel();
+            _videoCancellation = null;
+        }
     }
 }

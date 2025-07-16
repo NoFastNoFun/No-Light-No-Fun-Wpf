@@ -14,27 +14,34 @@ namespace No_Fast_No_Fun_Wpf {
         protected override void OnStartup(StartupEventArgs e) {
             base.OnStartup(e);
 
-            // 1) Chargement de la config factorisée
-            var config = new JsonFileConfigService<AppConfigDto>("appconfig.json").Load();
+            // 1. Charge la config appli (unique source de vérité)
+            var configService = new JsonFileConfigService<AppConfigDto>("app_config.json");
+            var appConfig = configService.Load();
 
-            // 2) Instanciation des services DMX
+            // 2. Instancie le service ArtNet + listener UDP
             _artNetController = new ArtNetDmxController();
             _listener = new UdpListenerService();
-            _listener.Start(config.ListeningPort);
+            _listener.Start(appConfig.ListeningPort);
 
-            // 3) Routage ArtNet avec DmxRoutingService
+            // 3. Instancie les ViewModels centraux
+            var configEditorVm = new ConfigEditorViewModel(); // source de vérité
+            var patchMapManagerVm = new PatchMapManagerViewModel(configEditorVm);
             var routingSvc = new DmxRoutingService(
-                    config.Routers.Select(dto => DmxRouterSettings.FromDto(dto)), // ou une méthode équivalente
-                    config.PatchMap,
-                    _artNetController
-            );
+                                appConfig.Routers.Select(DmxRouterSettings.FromDto),
+                                configEditorVm.ConfigItems.Select(x => x.ToModel()),    
+                                patchMapManagerVm.Entries.Select(x => x.ToModel()),     
+                                _artNetController
+                                );
+            var previewVm = new MatrixPreviewViewModel(_listener, routingSvc, patchMapManagerVm, configEditorVm);
 
-
-
+            // 4. Routage DMX
             _listener.OnUpdatePacket += routingSvc.RouteUpdate;
+            _listener.OnUpdatePacket += previewVm.HandleUpdateMessage;
 
-            // 4) Instanciation de la fenêtre principale avec DI
-            var mainVm = new MainWindowViewModel(_listener, _artNetController);
+            // 5. MainWindowViewModel DI
+            var mainVm = new MainWindowViewModel(_listener, _artNetController, configEditorVm, patchMapManagerVm, previewVm, appConfig);
+
+            // 6. MainWindow (view) + DataContext
             var window = new MainWindow {
                 DataContext = mainVm
             };

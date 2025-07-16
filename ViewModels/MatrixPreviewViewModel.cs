@@ -20,6 +20,7 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
         private WriteableBitmap _bitmap;
         public IReadOnlyDictionary<int, Point3D> EntityMap => _entityMap;
         private readonly PatchMapManagerViewModel _patchMapManager;
+        private readonly ConfigEditorViewModel _configEditor;
 
 
         public WriteableBitmap Bitmap {
@@ -53,13 +54,14 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
         }
 
 
-        public MatrixPreviewViewModel(UdpListenerService listener, DmxRoutingService routingService, PatchMapManagerViewModel patchMapManager) {
+        public MatrixPreviewViewModel(UdpListenerService listener, DmxRoutingService routingService, PatchMapManagerViewModel patchMapManager, ConfigEditorViewModel configEditor) {
             _listener = listener;
+            _listener.OnUpdatePacket += HandleUpdateMessage;
             _routingService = routingService;
             _patchMapManager = patchMapManager;
             OpenConsoleCommand = new RelayCommand(_ => OpenConsole());
             LoadJsonCommand = new RelayCommand(_ => LoadJson());
-
+            _configEditor = configEditor;
         }
 
         public void OnViewActivated() {
@@ -94,7 +96,7 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
         }
 
         private void OpenConsole() {
-            var vm = new ConsoleWindowViewModel(_listener, _routingService, _entityMap, _patchMapManager);
+            var vm = new ConsoleWindowViewModel(_listener, _routingService, _entityMap, _patchMapManager, _configEditor);
             var win = new ConsoleWindow(_listener, _routingService, _entityMap) { DataContext = vm };
             win.Show();
         }
@@ -188,7 +190,7 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
             var map = LoadFromJson(_targetWidth, _targetHeight);
             if (map != null && map.Count > 0) {
                 _entityMap = map;
-                BuildPixelsFromMap(); // recrée bitmap selon le mapping
+                BuildPixelsFromMap(); 
             }
         }
 

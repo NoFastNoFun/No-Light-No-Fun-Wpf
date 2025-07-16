@@ -10,11 +10,6 @@
             <Button Content="Save"
               Command="{Binding SaveCommand, Mode=OneWay}"
               Margin="0,0,5,0"/>
-            <Button Content="Import CSV"
-              Command="{Binding ImportCommand, Mode=OneWay}"
-              Margin="0,0,5,0"/>
-            <Button Content="Export CSV"
-              Command="{Binding ExportCommand, Mode=OneWay}"/>
         </StackPanel>
 
         <!-- Grille des mappings -->

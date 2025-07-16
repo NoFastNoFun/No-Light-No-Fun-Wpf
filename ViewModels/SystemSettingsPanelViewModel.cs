@@ -20,12 +20,6 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
             set => SetProperty(ref _selectedPort, value);
         }
 
-        private int _selectedUniverse;
-        public int SelectedUniverse {
-            get => _selectedUniverse;
-            set => SetProperty(ref _selectedUniverse, value);
-        }
-
         public ICommand ApplySettingsCommand {
             get;
         }
@@ -60,16 +54,15 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
                 return;
             }
             _listener.Stop();
-            _listener.UniverseToListen = SelectedUniverse;
-            _listener.Start(SelectedPort);
-            Logs.Add($"[{DateTime.Now:HH:mm:ss}] Paramètres appliqués avec succès (Port : {SelectedPort}, Univers : {SelectedUniverse})");
+            // Plus de gestion d'univers, on écoute tout sur ce port.
+            _listener.Start(SelectedPort); // à adapter si besoin
+            Logs.Add($"[{DateTime.Now:HH:mm:ss}] Paramètres appliqués avec succès (Port : {SelectedPort})");
         }
 
         private void Save() {
             _appConfig.ListeningPort = SelectedPort;
-            _appConfig.ListeningUniverse = SelectedUniverse;
+            // _appConfig.ListeningUniverse = ... // SUPPRIMER cette ligne si présente ailleurs
             _appConfig.PatchMap = _patchVm.ToDto(); // on sauvegarde ce qui est dans le patch manager
-            // Si tu veux synchroniser d'autres parties du DTO ici, fais-le.
             _jsonService.Save(_appConfig);
             Logs.Add($"[{DateTime.Now:HH:mm:ss}] Paramètres sauvegardés.");
         }
@@ -77,11 +70,9 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
         private void Load() {
             var dto = _jsonService.Load();
             SelectedPort = dto.ListeningPort;
-            SelectedUniverse = dto.ListeningUniverse;
+            // Pas de chargement d'univers.
             _patchVm.SetEntries(dto.PatchMap);
-            // Si tu veux resynchroniser _appConfig :
             _appConfig.ListeningPort = dto.ListeningPort;
-            _appConfig.ListeningUniverse = dto.ListeningUniverse;
             _appConfig.PatchMap = dto.PatchMap;
             Logs.Add($"[{DateTime.Now:HH:mm:ss}] Paramètres chargés");
         }

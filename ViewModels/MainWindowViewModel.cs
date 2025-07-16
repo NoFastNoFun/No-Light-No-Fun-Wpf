@@ -15,17 +15,11 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
         }
         private readonly MatrixPreviewViewModel _previewVm;
 
-        public MatrixPreviewViewModel Preview {
-            get;
-        }
-        readonly ArtNetDmxController _artNetController;
-        UdpListenerService _listener;
+        public MatrixPreviewViewModel Preview => _previewVm;
+        private readonly ArtNetDmxController _artNetController;
+        private UdpListenerService _listener;
 
-
-        int selectedUniverse = 1;
-        int selectedPort = 7777;
-
-        object _currentViewModel;
+        private object _currentViewModel;
         public object CurrentViewModel {
             get => _currentViewModel;
             private set => SetProperty(ref _currentViewModel, value);
@@ -34,54 +28,37 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
         public ICommand ChangeTabCommand {
             get;
         }
+        private readonly Dictionary<string, BaseViewModel> _panelViewModels;
 
-        readonly Dictionary<string, BaseViewModel> _panelViewModels;
-
-
-        public MainWindowViewModel(UdpListenerService listener, ArtNetDmxController artNetController) {
+        public MainWindowViewModel(
+            UdpListenerService listener,
+            ArtNetDmxController artNetController,
+            ConfigEditorViewModel configEditorVm,
+            PatchMapManagerViewModel patchMapManagerVm,
+            MatrixPreviewViewModel previewVm,
+            AppConfigDto appConfig // <-- AJOUTE CE PARAMÈTRE ICI
+        ) {
             _listener = listener;
-            _listener.UniverseToListen = selectedUniverse;
-            _listener.Start(selectedPort);
             _artNetController = artNetController;
-
-            var configService = new JsonFileConfigService<AppConfigDto>("app_config.json");
-            var appConfig = configService.Load();
-
-            var patchVm = new PatchMapManagerViewModel(appConfig);
-           
-
-            var routingService = new DmxRoutingService(
-                appConfig.Routers.Select(dto => DmxRouterSettings.FromDto(dto)),
-                appConfig.PatchMap,
-                _artNetController
-            );
-
-            var previewVm = new MatrixPreviewViewModel(_listener, routingService, patchVm);
             _previewVm = previewVm;
 
+            _panelViewModels = new Dictionary<string, BaseViewModel>
+            {
+                    { "System Settings", new SystemSettingsPanelViewModel(_listener, patchMapManagerVm, appConfig) }, // <-- PASSE appConfig !
+                    { "Configuration", configEditorVm },
+                    { "Monitoring", new MonitoringDashboardViewModel(_listener) },
+                    { "PatchMap", patchMapManagerVm },
+                    { "Streams", new StreamManagerViewModel() },
+                    { "Preview", previewVm },
+                    { "DMX Monitor", new DmxMonitorViewModel(_artNetController) },
+                };
 
-            // Dictionnaire d’onglets
-            _panelViewModels = new Dictionary<string, BaseViewModel> {
-        { "Configuration", new ConfigEditorViewModel() },
-        { "Monitoring", new MonitoringDashboardViewModel(_listener) },
-        { "PatchMap", patchVm },
-        { "Streams", new StreamManagerViewModel() },
-        { "Preview", previewVm },
-        { "DMX Monitor", new DmxMonitorViewModel(_artNetController) },
-         
-    };
-            // Routing eHub → Preview
-            _listener.OnUpdatePacket += routingService.RouteUpdate;
-            _listener.OnUpdatePacket += previewVm.HandleUpdateMessage;
-
-            // Initialisation des onglets
             Tabs = new ObservableCollection<string>(_panelViewModels.Keys);
             CurrentViewModel = _panelViewModels[Tabs[0]];
 
             ChangeTabCommand = new RelayCommand(param => {
                 if (param is string tab && _panelViewModels.TryGetValue(tab, out var vm)) {
                     CurrentViewModel = vm;
-
                 }
             });
         }
