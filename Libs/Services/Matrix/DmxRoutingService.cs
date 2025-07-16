@@ -110,7 +110,7 @@ namespace Services.Matrix {
                 _artNet.SendDmxFrame(ip, 6454, uni, data);
             }
 
-            Debug.WriteLine($"[Résumé] Pixels routés = {pixelsRoutés}, ignorés = {pixelsIgnorés}, total = {packet.Pixels.Count}");
+            //Debug.WriteLine($"[Résumé] Pixels routés = {pixelsRoutés}, ignorés = {pixelsIgnorés}, total = {packet.Pixels.Count}");
         }
     }
 }

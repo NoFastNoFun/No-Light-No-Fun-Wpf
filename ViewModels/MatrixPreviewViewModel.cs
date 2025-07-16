@@ -102,6 +102,7 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
         }
 
         public void HandleUpdateMessage(UpdateMessage msg) {
+            Debug.WriteLine($"[MatrixPreview] HandleUpdateMessage: {msg.Pixels.Count} pixels, {DateTime.Now:HH:mm:ss.fff}");
             Application.Current.Dispatcher.Invoke(() => {
                 if (Bitmap == null)
                     return;
@@ -113,8 +114,10 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
 
                     // 1. Mettre à jour les entités du message
                     foreach (var px in msg.Pixels) {
-                        if (!_entityMap.TryGetValue(px.Entity, out var pos))
+                        if (!_entityMap.TryGetValue(px.Entity, out var pos)) {
                             continue;
+                        }
+                    
 
                         var newColor = Color.FromRgb(px.R, px.G, px.B);
 
@@ -144,7 +147,7 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
                             }
                         }
                         else {
-                            _lastUpdateTime[px.Entity] = now; // même couleur, on rafraîchit juste le TTL
+                            _lastUpdateTime[px.Entity] = now; 
                         }
                     }
 

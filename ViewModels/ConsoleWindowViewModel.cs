@@ -154,7 +154,7 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
         private void StartRainbowAnimation() {
             _rainbowTimer?.Stop();
             _frame = 0;
-            _rainbowTimer = new System.Timers.Timer(1000.0 / 60.0);
+            _rainbowTimer = new System.Timers.Timer(1000 / 30);
             _rainbowTimer.Elapsed += (s, e) => {
                 var msg = BuildRainbowMessage(_frame);
                 _listener.SimulateUpdate(msg);
