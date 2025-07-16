@@ -6,7 +6,7 @@ using System.Diagnostics;
 using System.Linq;
 
 namespace Services.Matrix {
-    public class DmxRoutingService {
+    public class DmxRoutingService : IDmxRoutingService {
         private readonly IEnumerable<DmxRouterSettings> _routers;
         private readonly IEnumerable<PatchMapEntryDto> _patches;
         private readonly IEnumerable<ConfigItem> _configItems;
@@ -45,7 +45,7 @@ namespace Services.Matrix {
 
                 if (patch != null) {
                     universe = patch.Universe;
-                    controllerIp = null; // PatchMap ne définit pas l’IP, il faudra la retrouver dans la config
+                    controllerIp = null; // PatchMap ne définit pas l'IP, il faudra la retrouver dans la config
                 }
                 else {
                     config = _configItems.FirstOrDefault(c =>
@@ -59,7 +59,7 @@ namespace Services.Matrix {
                     controllerIp = config.ControllerIp;
                 }
 
-                // 2. Sélection du routeur : priorité PatchMap (univers+ID) sinon Config
+                // 2. Sélection du routeur : priorité PatchMap (univers+ID) sinon Config
                 var possibleRouters = _routers.Where(r =>
                     r.Universes.Any(u =>
                         entityId >= u.EntityIdStart &&

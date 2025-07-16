@@ -1,6 +1,7 @@
 ﻿using System.Windows;
 using Core.Dtos;
 using Core.Models;
+using ConfigModel = Core.Models.Config;
 using No_Fast_No_Fun_Wpf.Services.Network;
 using No_Fast_No_Fun_Wpf.ViewModels;
 using Services.Config;
@@ -23,25 +24,26 @@ namespace No_Fast_No_Fun_Wpf {
             _listener = new UdpListenerService();
             _listener.Start(appConfig.ListeningPort);
 
-            // 3. Instancie les ViewModels centraux
+            // 3. Load backend-style config and create optimized routing service
+            var backendConfigService = new ConfigService("config.json");
+            var backendConfig = backendConfigService.Load();
+            var optimizedRoutingSvc = new OptimizedDmxRoutingService(backendConfig, _artNetController);
+
+            // 4. Instancie les ViewModels centraux (keep old ones for UI compatibility)
             var configEditorVm = new ConfigEditorViewModel(); // source de vérité
             var patchMapManagerVm = new PatchMapManagerViewModel(configEditorVm);
-            var routingSvc = new DmxRoutingService(
-                                appConfig.Routers.Select(DmxRouterSettings.FromDto),
-                                configEditorVm.ConfigItems.Select(x => x.ToModel()),    
-                                patchMapManagerVm.Entries.Select(x => x.ToModel()),     
-                                _artNetController
-                                );
-            var previewVm = new MatrixPreviewViewModel(_listener, routingSvc, patchMapManagerVm, configEditorVm);
+            
+            // 5. Use optimized routing service for DMX output
+            var previewVm = new MatrixPreviewViewModel(_listener, optimizedRoutingSvc, patchMapManagerVm, configEditorVm);
 
-            // 4. Routage DMX
-            _listener.OnUpdatePacket += routingSvc.RouteUpdate;
+            // 6. Routage DMX - use optimized service
+            _listener.OnUpdatePacket += optimizedRoutingSvc.RouteUpdate;
             _listener.OnUpdatePacket += previewVm.HandleUpdateMessage;
 
-            // 5. MainWindowViewModel DI
+            // 7. MainWindowViewModel DI
             var mainVm = new MainWindowViewModel(_listener, _artNetController, configEditorVm, patchMapManagerVm, previewVm, appConfig);
 
-            // 6. MainWindow (view) + DataContext
+            // 8. MainWindow (view) + DataContext
             var window = new MainWindow {
                 DataContext = mainVm
             };
