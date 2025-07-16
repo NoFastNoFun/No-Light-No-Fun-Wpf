@@ -101,91 +101,62 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
             win.Show();
         }
 
-        public void HandleUpdateMessage(UpdateMessage msg) {
-            Debug.WriteLine($"[MatrixPreview] HandleUpdateMessage: {msg.Pixels.Count} pixels, {DateTime.Now:HH:mm:ss.fff}");
-            Application.Current.Dispatcher.Invoke(() => {
-                if (Bitmap == null)
+        public void HandleUpdateMessage(Core.Messages.UpdateMessage msg) {
+            try {
+                if (msg?.Pixels == null || msg.Pixels.Count == 0) {
+                    Debug.WriteLine("[ERROR] Aucun pixel à afficher.");
                     return;
-                Bitmap.Lock();
+                }
+                Debug.WriteLine($"Pixels: {msg.Pixels.Count} | First: {msg.Pixels.FirstOrDefault()?.Entity} | Last: {msg.Pixels.LastOrDefault()?.Entity}");
 
-                unsafe {
-                    IntPtr pBackBuffer = Bitmap.BackBuffer;
-                    DateTime now = DateTime.UtcNow;
+                Application.Current.Dispatcher.Invoke(() => {
+                    if (Bitmap == null || _entityMap == null || _entityMap.Count == 0)
+                        return;
 
-                    // 1. Mettre à jour les entités du message
+                    int bufferSize = _bitmapWidth * _bitmapHeight * 4;
+                    if (Bitmap.BackBuffer == IntPtr.Zero || bufferSize <= 0) {
+                        Debug.WriteLine("[ERROR] Bitmap.BackBuffer non initialisé ou taille invalide.");
+                        return;
+                    }
+
+                    Bitmap.Lock();
+                    unsafe {
+                        IntPtr pBackBuffer = Bitmap.BackBuffer;
+                        System.Span<byte> span = new Span<byte>((void*)pBackBuffer, bufferSize);
+                        span.Clear();
+                    }
                     foreach (var px in msg.Pixels) {
-                        if (!_entityMap.TryGetValue(px.Entity, out var pos)) {
+                        if (px == null) {
+                            Debug.WriteLine("[ERROR] Pixel null détecté.");
                             continue;
                         }
-                    
-
-                        var newColor = Color.FromRgb(px.R, px.G, px.B);
-
-                        bool shouldRedraw = !_currentColors.TryGetValue(px.Entity, out var current) || current != newColor;
-
-                        if (shouldRedraw) {
-                            _currentColors[px.Entity] = newColor;
-                            _lastUpdateTime[px.Entity] = now;
-
-                            int x = (int)(pos.X * pixelSize);
-                            int y = (int)(pos.Y * pixelSize);
-
-                            if (x >= 0 && y >= 0 && x < _bitmapWidth && y < _bitmapHeight) {
-                                int colorInt = (px.B) | (px.G << 8) | (px.R << 16);
-
-                                for (int dx = 0; dx < pixelSize; dx++) {
-                                    for (int dy = 0; dy < pixelSize; dy++) {
-                                        int pxX = x + dx;
-                                        int pxY = y + dy;
-
-                                        if (pxX < _bitmapWidth && pxY < _bitmapHeight) {
-                                            int offset = pxY * _stride + pxX * 4;
-                                            *((int*)((byte*)pBackBuffer + offset)) = colorInt;
-                                        }
+                        if (px.Entity < 100 || px.Entity > 19858)
+                            continue;
+                        if (_entityMap.TryGetValue(px.Entity, out var pos)) {
+                            int x = (int)pos.X;
+                            int y = (int)pos.Y;
+                            if (x >= 0 && x < _bitmapWidth && y >= 0 && y < _bitmapHeight) {
+                                unsafe {
+                                    IntPtr pBackBuffer = Bitmap.BackBuffer;
+                                    int colorData = (px.B << 16) | (px.G << 8) | (px.R);
+                                    int offset = (y * _bitmapWidth + x) * 4;
+                                    if (offset >= 0 && offset + 4 <= bufferSize) {
+                                        System.Runtime.InteropServices.Marshal.WriteInt32(pBackBuffer, offset, colorData);
+                                    } else {
+                                        Debug.WriteLine($"[ERROR] Offset {offset} hors limites pour le buffer.");
                                     }
                                 }
                             }
                         }
-                        else {
-                            _lastUpdateTime[px.Entity] = now; 
-                        }
                     }
-
-                    // 2. Éteindre les pixels expirés
-                    var toExpire = new List<int>();
-                    foreach (var kv in _lastUpdateTime) {
-                        if ((now - kv.Value).TotalMilliseconds > TTL_MS)
-                            toExpire.Add(kv.Key);
-                    }
-
-                    foreach (var entity in toExpire) {
-                        if (_entityMap.TryGetValue(entity, out var pos)) {
-                            int x = (int)(pos.X * pixelSize);
-                            int y = (int)(pos.Y * pixelSize);
-
-                            if (x >= 0 && y >= 0 && x < _bitmapWidth && y < _bitmapHeight) {
-                                for (int dx = 0; dx < pixelSize; dx++) {
-                                    for (int dy = 0; dy < pixelSize; dy++) {
-                                        int pxX = x + dx;
-                                        int pxY = y + dy;
-
-                                        if (pxX < _bitmapWidth && pxY < _bitmapHeight) {
-                                            int offset = pxY * _stride + pxX * 4;
-                                            *((int*)((byte*)pBackBuffer + offset)) = 0x000000; // noir
-                                        }
-                                    }
-                                }
-                            }
-
-                            _currentColors[entity] = Colors.Black;
-                            _lastUpdateTime.Remove(entity); // plus actif
-                        }
-                    }
-                }
-
-                Bitmap.AddDirtyRect(new Int32Rect(0, 0, _bitmapWidth, _bitmapHeight));
-                Bitmap.Unlock();
-            });
+                    Bitmap.AddDirtyRect(new Int32Rect(0, 0, _bitmapWidth, _bitmapHeight));
+                    Bitmap.Unlock();
+                });
+            }
+            catch (Exception ex) {
+                Debug.WriteLine($"[ERROR] HandleUpdateMessage: {ex.GetType()} - {ex.Message}\n{ex.StackTrace}");
+                MessageBox.Show($"Exception: {ex.GetType()}\n{ex.Message}\n{ex.StackTrace}", "Erreur HandleUpdateMessage");
+            }
         }
 
 

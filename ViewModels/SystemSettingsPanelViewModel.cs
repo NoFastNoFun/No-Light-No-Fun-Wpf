@@ -55,13 +55,12 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
             }
             _listener.Stop();
             // Plus de gestion d'univers, on écoute tout sur ce port.
-            _listener.Start(SelectedPort); // à adapter si besoin
+            _listener.Start(SelectedPort); 
             Logs.Add($"[{DateTime.Now:HH:mm:ss}] Paramètres appliqués avec succès (Port : {SelectedPort})");
         }
 
         private void Save() {
             _appConfig.ListeningPort = SelectedPort;
-            // _appConfig.ListeningUniverse = ... // SUPPRIMER cette ligne si présente ailleurs
             _appConfig.PatchMap = _patchVm.ToDto(); // on sauvegarde ce qui est dans le patch manager
             _jsonService.Save(_appConfig);
             Logs.Add($"[{DateTime.Now:HH:mm:ss}] Paramètres sauvegardés.");
