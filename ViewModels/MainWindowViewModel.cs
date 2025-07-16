@@ -29,6 +29,8 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
             get;
         }
         private readonly Dictionary<string, BaseViewModel> _panelViewModels;
+        private readonly MatrixMonitoringViewModel _monitoringVm;
+        public MatrixMonitoringViewModel Monitoring => _monitoringVm;
 
         public MainWindowViewModel(
             UdpListenerService listener,
@@ -36,20 +38,24 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
             ConfigEditorViewModel configEditorVm,
             PatchMapManagerViewModel patchMapManagerVm,
             MatrixPreviewViewModel previewVm,
-            AppConfigDto appConfig // <-- AJOUTE CE PARAMÈTRE ICI
+            AppConfigDto appConfig,
+            ConfigModel backendConfig,
+            IDmxRoutingService routingService
         ) {
             _listener = listener;
             _artNetController = artNetController;
             _previewVm = previewVm;
+            _monitoringVm = new MatrixMonitoringViewModel(routingService, backendConfig, _listener);
 
             _panelViewModels = new Dictionary<string, BaseViewModel>
             {
-                    { "System Settings", new SystemSettingsPanelViewModel(_listener, patchMapManagerVm, appConfig) }, // <-- PASSE appConfig !
+                    { "System Settings", new SystemSettingsPanelViewModel(_listener, patchMapManagerVm, appConfig) },
                     { "Configuration", configEditorVm },
                     { "Monitoring", new MonitoringDashboardViewModel(_listener) },
                     { "PatchMap", patchMapManagerVm },
                     { "Streams", new StreamManagerViewModel() },
                     { "Preview", previewVm },
+                    { "Matrix Monitor", _monitoringVm },
                     { "DMX Monitor", new DmxMonitorViewModel(_artNetController) },
                 };
 

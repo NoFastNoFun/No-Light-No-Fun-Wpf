@@ -41,7 +41,7 @@ namespace No_Fast_No_Fun_Wpf {
             _listener.OnUpdatePacket += previewVm.HandleUpdateMessage;
 
             // 7. MainWindowViewModel DI
-            var mainVm = new MainWindowViewModel(_listener, _artNetController, configEditorVm, patchMapManagerVm, previewVm, appConfig);
+            var mainVm = new MainWindowViewModel(_listener, _artNetController, configEditorVm, patchMapManagerVm, previewVm, appConfig, backendConfig, optimizedRoutingSvc);
 
             // 8. MainWindow (view) + DataContext
             var window = new MainWindow {
