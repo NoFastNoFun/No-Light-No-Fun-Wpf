@@ -8,13 +8,13 @@ using Services.Matrix;
 
 namespace No_Fast_No_Fun_Wpf {
     public partial class App : Application {
-        private UdpListenerService _listener;
-        private ArtNetDmxController _artNetController;
+        private UdpListenerService _listener = null!;
+        private ArtNetDmxController _artNetController = null!;
 
         protected override void OnStartup(StartupEventArgs e) {
             base.OnStartup(e);
 
-            // 1. Charge la config appli (unique source de vérité)
+            // 1. Charge la config appli (unique source de vérité sur disque)
             var configService = new JsonFileConfigService<AppConfigDto>("app_config.json");
             var appConfig = configService.Load();
 
@@ -24,28 +24,64 @@ namespace No_Fast_No_Fun_Wpf {
             _listener.Start(appConfig.ListeningPort);
 
             // 3. Instancie les ViewModels centraux
-            var configEditorVm = new ConfigEditorViewModel(); // source de vérité
+            var configEditorVm = new ConfigEditorViewModel();
             var patchMapManagerVm = new PatchMapManagerViewModel(configEditorVm);
+
+            // 4. Génère les routeurs DYNAMIQUEMENT à partir de la config en mémoire
+            var routers = BuildRoutersFromConfig(configEditorVm.ConfigItems.Select(x => x.ToModel()));
+
+            // 5. Service de routage
             var routingSvc = new DmxRoutingService(
-                                appConfig.Routers.Select(DmxRouterSettings.FromDto),
-                                configEditorVm.ConfigItems.Select(x => x.ToModel()),    
-                                patchMapManagerVm.Entries.Select(x => x.ToModel()),     
-                                _artNetController
-                                );
+                routers,
+                configEditorVm.ConfigItems.Select(x => x.ToModel()),
+                patchMapManagerVm.Entries.Select(x => x.ToModel()),
+                _artNetController
+            );
+
             var previewVm = new MatrixPreviewViewModel(_listener, routingSvc, patchMapManagerVm, configEditorVm);
 
-            // 4. Routage DMX
+            // 6. Routage DMX
             _listener.OnUpdatePacket += routingSvc.RouteUpdate;
             _listener.OnUpdatePacket += previewVm.HandleUpdateMessage;
 
-            // 5. MainWindowViewModel DI
-            var mainVm = new MainWindowViewModel(_listener, _artNetController, configEditorVm, patchMapManagerVm, previewVm, appConfig);
+            // 7. MainWindowViewModel DI
+            var mainVm = new MainWindowViewModel(
+                _listener,
+                _artNetController,
+                configEditorVm,
+                patchMapManagerVm,
+                previewVm,
+                appConfig
+            );
 
-            // 6. MainWindow (view) + DataContext
+            // 8. MainWindow (view) + DataContext
             var window = new MainWindow {
                 DataContext = mainVm
             };
             window.Show();
+        }
+
+        // ...
+
+        private List<DmxRouterSettings> BuildRoutersFromConfig(IEnumerable<ConfigItem> configItems) {
+            var routers = new List<DmxRouterSettings>();
+            foreach (var cfg in configItems) {
+                if (string.IsNullOrEmpty(cfg.ControllerIp))
+                    continue;
+                var router = routers.FirstOrDefault(r => r.Ip == cfg.ControllerIp);
+                if (router == null) {
+                    router = new DmxRouterSettings();
+                    router.Ip = cfg.ControllerIp;
+                    routers.Add(router);
+                }
+                router.Universes.Add(new UniverseMap {
+                    Universe = cfg.Universe,
+                    EntityIdStart = cfg.StartEntityId,
+                    EntityIdEnd = cfg.EndEntityId,
+                    StartAddress = 0
+                });
+            }
+            return routers;
         }
 
         protected override void OnExit(ExitEventArgs e) {
@@ -55,3 +91,4 @@ namespace No_Fast_No_Fun_Wpf {
         }
     }
 }
+

@@ -104,10 +104,8 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
         public void HandleUpdateMessage(Core.Messages.UpdateMessage msg) {
             try {
                 if (msg?.Pixels == null || msg.Pixels.Count == 0) {
-                    Debug.WriteLine("[ERROR] Aucun pixel à afficher.");
                     return;
                 }
-                Debug.WriteLine($"Pixels: {msg.Pixels.Count} | First: {msg.Pixels.FirstOrDefault()?.Entity} | Last: {msg.Pixels.LastOrDefault()?.Entity}");
 
                 Application.Current.Dispatcher.Invoke(() => {
                     if (Bitmap == null || _entityMap == null || _entityMap.Count == 0)
@@ -115,7 +113,6 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
 
                     int bufferSize = _bitmapWidth * _bitmapHeight * 4;
                     if (Bitmap.BackBuffer == IntPtr.Zero || bufferSize <= 0) {
-                        Debug.WriteLine("[ERROR] Bitmap.BackBuffer non initialisé ou taille invalide.");
                         return;
                     }
 
@@ -127,7 +124,6 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
                     }
                     foreach (var px in msg.Pixels) {
                         if (px == null) {
-                            Debug.WriteLine("[ERROR] Pixel null détecté.");
                             continue;
                         }
                         if (px.Entity < 100 || px.Entity > 19858)
@@ -143,7 +139,6 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
                                     if (offset >= 0 && offset + 4 <= bufferSize) {
                                         System.Runtime.InteropServices.Marshal.WriteInt32(pBackBuffer, offset, colorData);
                                     } else {
-                                        Debug.WriteLine($"[ERROR] Offset {offset} hors limites pour le buffer.");
                                     }
                                 }
                             }
@@ -154,8 +149,6 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
                 });
             }
             catch (Exception ex) {
-                Debug.WriteLine($"[ERROR] HandleUpdateMessage: {ex.GetType()} - {ex.Message}\n{ex.StackTrace}");
-                MessageBox.Show($"Exception: {ex.GetType()}\n{ex.Message}\n{ex.StackTrace}", "Erreur HandleUpdateMessage");
             }
         }
 

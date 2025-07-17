@@ -14,17 +14,14 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
             get;
         }
         private readonly MatrixPreviewViewModel _previewVm;
-
         public MatrixPreviewViewModel Preview => _previewVm;
         private readonly ArtNetDmxController _artNetController;
         private UdpListenerService _listener;
-
         private object _currentViewModel;
         public object CurrentViewModel {
             get => _currentViewModel;
             private set => SetProperty(ref _currentViewModel, value);
         }
-
         public ICommand ChangeTabCommand {
             get;
         }
@@ -36,7 +33,7 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
             ConfigEditorViewModel configEditorVm,
             PatchMapManagerViewModel patchMapManagerVm,
             MatrixPreviewViewModel previewVm,
-            AppConfigDto appConfig // <-- AJOUTE CE PARAMÈTRE ICI
+            AppConfigDto appConfig
         ) {
             _listener = listener;
             _artNetController = artNetController;
@@ -44,14 +41,14 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
 
             _panelViewModels = new Dictionary<string, BaseViewModel>
             {
-                    { "System Settings", new SystemSettingsPanelViewModel(_listener, patchMapManagerVm, appConfig) }, // <-- PASSE appConfig !
-                    { "Configuration", configEditorVm },
-                    { "Monitoring", new MonitoringDashboardViewModel(_listener) },
-                    { "PatchMap", patchMapManagerVm },
-                    { "Streams", new StreamManagerViewModel() },
-                    { "Preview", previewVm },
-                    { "DMX Monitor", new DmxMonitorViewModel(_artNetController) },
-                };
+                { "System Settings", new SystemSettingsPanelViewModel(_listener, patchMapManagerVm, appConfig) },
+                { "Configuration", configEditorVm },
+                { "Monitoring", new MonitoringDashboardViewModel(_listener) },
+                { "PatchMap", patchMapManagerVm },
+                { "Streams", new StreamManagerViewModel() },
+                { "Preview", previewVm },
+                { "DMX Monitor", new DmxMonitorViewModel(_artNetController) },
+            };
 
             Tabs = new ObservableCollection<string>(_panelViewModels.Keys);
             CurrentViewModel = _panelViewModels[Tabs[0]];

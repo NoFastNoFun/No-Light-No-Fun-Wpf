@@ -16,6 +16,7 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
         private readonly Dictionary<int, Point3D> _entityMap;
         private readonly PatchMapManagerViewModel _patchMapManager;
         private readonly ConfigEditorViewModel _configEditor;
+        private UpdateMessage _lastImageMsg;
 
         private CancellationTokenSource? _mediaCancellation;
         private CancellationTokenSource? _videoCancellation;
@@ -93,7 +94,9 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
         public ICommand StopMediaCommand {
             get;
         }
-
+        public ICommand SendCurrentFrameToMatrixCommand {
+            get;
+        }
         private string _selectedMode = "Solid";
         public string SelectedMode {
             get => _selectedMode;
@@ -119,6 +122,7 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
             StopRainbowCommand = new RelayCommand(_ => StopRainbowAnimation());
             LoadMediaCommand = new RelayCommand(_ => LoadMediaFile());
             StopMediaCommand = new RelayCommand(_ => StopMedia());
+            SendCurrentFrameToMatrixCommand = new RelayCommand(_ => SendLastImageToMatrix());
 
             UpdateEffectiveColor();
         }
@@ -157,8 +161,11 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
 
         private void SendToMatrix() {
             var msg = BuildUpdateMessage();
-            Debug.WriteLine($"[CONSOLE] SendToMatrix: {msg.Pixels.Count} pixels, 1st={msg.Pixels.FirstOrDefault()?.Entity}, last={msg.Pixels.LastOrDefault()?.Entity}");
             _routingService?.RouteUpdate(msg);
+        }
+        private void SendLastImageToMatrix() {
+            if (_lastImageMsg != null)
+                _routingService.RouteUpdate(_lastImageMsg);
         }
 
 
@@ -275,6 +282,7 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
                 }
             }
             var updateMsg = new UpdateMessage(pixels);
+            _lastImageMsg = updateMsg; 
             _listener.SimulateUpdate(updateMsg);
             _routingService.RouteUpdate(updateMsg);
         }
@@ -310,6 +318,7 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
                             }
                         }
                         var updateMsg = new UpdateMessage(pixels);
+                        _lastImageMsg = updateMsg; 
                         _listener.SimulateUpdate(updateMsg);
                         _routingService.RouteUpdate(updateMsg);
 
@@ -333,27 +342,45 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
                 return;
             }
 
-            int delay = (int)(1000.0 / 60);
+            // Timestamps en ms
+            double videoStart = 0;
+            double sysStart = 0;
             using var frame = new Mat();
 
             try {
+                videoStart = capture.PosMsec;
+                sysStart = Stopwatch.GetTimestamp() / (double)Stopwatch.Frequency * 1000.0; // en ms
+
                 while (!token.IsCancellationRequested) {
                     if (!capture.Read(frame) || frame.Empty()) {
                         capture.Set(VideoCaptureProperties.PosFrames, 0);
+                        videoStart = capture.PosMsec;
+                        sysStart = Stopwatch.GetTimestamp() / (double)Stopwatch.Frequency * 1000.0;
                         continue;
                     }
+
+                    double currentVideoMs = capture.PosMsec - videoStart;
+                    double currentSysMs = (Stopwatch.GetTimestamp() / (double)Stopwatch.Frequency * 1000.0) - sysStart;
+
+                    double diff = currentVideoMs - currentSysMs;
+
+                    if (diff > 1) {
+                        await Task.Delay((int)diff, token);
+                    } // si diff < 0, on a du retard, on saute l’attente et on affiche direct
+
                     using var resized = frame.Resize(new OpenCvSharp.Size(_matrixWidth, _matrixHeight));
                     var updateMsg = BuildUpdateFromMat(resized);
+                    _lastImageMsg = updateMsg;
                     _listener.SimulateUpdate(updateMsg);
                     _routingService.RouteUpdate(updateMsg);
-
-                    await Task.Delay(delay, token);
                 }
             }
             catch (TaskCanceledException) {
                 Debug.WriteLine("Lecture de la vidéo arrêtée.");
             }
         }
+
+
 
         private UpdateMessage BuildUpdateFromMat(Mat mat) {
             var pixels = new List<Pixel>();

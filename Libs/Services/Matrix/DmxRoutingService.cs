@@ -7,7 +7,7 @@ using System.Linq;
 
 namespace Services.Matrix {
     public class DmxRoutingService {
-        private readonly IEnumerable<DmxRouterSettings> _routers;
+        private readonly List<DmxRouterSettings> _routers;
         private readonly IEnumerable<PatchMapEntryDto> _patches;
         private readonly IEnumerable<ConfigItem> _configItems;
         private readonly ArtNetDmxController _artNet;
@@ -20,7 +20,8 @@ namespace Services.Matrix {
             IEnumerable<ConfigItem> configItems,
             IEnumerable<PatchMapEntryDto> patches,
             ArtNetDmxController artNet) {
-            _routers = routers;
+            // Copie locale modifiable pour patcher à chaud si nécessaire
+            _routers = routers.ToList();
             _configItems = configItems;
             _patches = patches;
             _artNet = artNet;
@@ -28,19 +29,6 @@ namespace Services.Matrix {
 
         public void RouteUpdate(UpdateMessage packet) {
             _buffers.Clear();
-
-            Debug.WriteLine("=== Listing routeurs chargés en mémoire ===");
-            foreach (var router in _routers) {
-                Debug.WriteLine($"[Router] {router.Ip}");
-                foreach (var uni in router.Universes) {
-                    Debug.WriteLine($"    Univers {uni.Universe} : {uni.EntityIdStart}-{uni.EntityIdEnd} (StartAddr={uni.StartAddress})");
-                }
-            }
-            Debug.WriteLine("=== PatchMap Entries ===");
-            foreach (var patch in _patches) {
-                Debug.WriteLine($"Patch: {patch.EntityStart}-{patch.EntityEnd} U{patch.Universe}");
-            }
-            Debug.WriteLine("=======================");
 
             int pixelsRoutés = 0;
             int pixelsPatchés = 0;
@@ -72,7 +60,6 @@ namespace Services.Matrix {
 
                     if (possibleRouters.Count == 0) {
                         pixelsIgnorés++;
-                        Debug.WriteLine($"[Route] Entity {entityId} ignorée (pas de routeur pour univers {universe})");
                         continue;
                     }
 
@@ -86,7 +73,6 @@ namespace Services.Matrix {
 
                     if (map == null) {
                         pixelsIgnorés++;
-                        Debug.WriteLine($"[Route] Entity {entityId} ignorée (pas de map dans router pour univers {universe})");
                         continue;
                     }
 
@@ -103,7 +89,6 @@ namespace Services.Matrix {
                     }
                     else {
                         pixelsIgnorés++;
-                        Debug.WriteLine($"[Route] Entity {entityId} ignorée (overflow DMX offset)");
                     }
                     continue;
                 }
@@ -124,7 +109,6 @@ namespace Services.Matrix {
 
                     if (possibleRouters.Count == 0) {
                         pixelsIgnorés++;
-                        Debug.WriteLine($"[Patch] Entity {entityId} ignorée (pas de routeur pour univers {universe} via PatchMap)");
                         continue;
                     }
 
@@ -137,7 +121,6 @@ namespace Services.Matrix {
 
                     if (map == null) {
                         pixelsIgnorés++;
-                        Debug.WriteLine($"[Patch] Entity {entityId} ignorée (pas de map dans router pour univers {universe} via PatchMap)");
                         continue;
                     }
 
@@ -154,14 +137,12 @@ namespace Services.Matrix {
                     }
                     else {
                         pixelsIgnorés++;
-                        Debug.WriteLine($"[Patch] Entity {entityId} ignorée (overflow DMX offset via PatchMap)");
                     }
                     continue;
                 }
 
                 // 3. Sinon, ignoré
                 pixelsIgnorés++;
-                Debug.WriteLine($"[Ignore] Entity {entityId} ignorée (pas dans config ni patchmap)");
             }
 
             // 4. Envoi ArtNet (par ip/universe)
@@ -171,7 +152,6 @@ namespace Services.Matrix {
                 _artNet.SendDmxFrame(ip, 6454, uni, data);
             }
 
-            Debug.WriteLine($"[Résumé] Pixels routés = {pixelsRoutés}, patchés = {pixelsPatchés}, ignorés = {pixelsIgnorés}, total = {packet.Pixels.Count}");
         }
     }
 }
