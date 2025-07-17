@@ -12,17 +12,20 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
+using No_Fast_No_Fun_Wpf.ViewModels;
 
-namespace No_Fast_No_Fun_Wpf.Views.Controls
-{
+namespace No_Fast_No_Fun_Wpf.Views.Controls {
     /// <summary>
     /// Logique d'interaction pour MonitoringDashboardControl.xaml
     /// </summary>
-    public partial class MonitoringDashboardControl : UserControl
-    {
-        public MonitoringDashboardControl()
-        {
+    public partial class MonitoringDashboardControl : UserControl {
+        public MonitoringDashboardControl() {
             InitializeComponent();
+        }
+
+        public MonitoringDashboardControl(MonitoringDashboardViewModel viewModel) {
+            InitializeComponent();
+            DataContext = viewModel;
         }
     }
 }

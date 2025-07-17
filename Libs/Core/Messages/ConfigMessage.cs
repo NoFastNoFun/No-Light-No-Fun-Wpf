@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Text;
 using Core.Models;
 
@@ -24,29 +25,31 @@ namespace Core.Messages {
             ushort count = BitConverter.ToUInt16(buffer, offset);
             offset += 2;
 
+            // Chaque item = 8 octets (ushort startIndex, ushort startId, ushort endIndex, ushort endId)
+            int itemSize = 8;
+
             for (int i = 0; i < count; i++) {
-                if (offset + 5 > buffer.Length)
-                    throw new ArgumentException("Buffer trop petit pour lire ConfigItem");
-
-                ushort startEntityId = BitConverter.ToUInt16(buffer, offset);
+                // ... ici, tu parses le buffer
+                ushort startIndex = BitConverter.ToUInt16(buffer, offset);
                 offset += 2;
-                ushort endEntityId = BitConverter.ToUInt16(buffer, offset);
+                ushort startId = BitConverter.ToUInt16(buffer, offset);
                 offset += 2;
-                byte universe = buffer[offset];
-                offset += 1;
+                ushort endIndex = BitConverter.ToUInt16(buffer, offset);
+                offset += 2;
+                ushort endId = BitConverter.ToUInt16(buffer, offset);
+                offset += 2;
 
-                byte ipLength = buffer[offset];
-                offset += 1;
-                if (offset + ipLength > buffer.Length)
-                    throw new ArgumentException("Buffer trop petit pour lire ControllerIp");
-
-                string controllerIp = Encoding.UTF8.GetString(buffer, offset, ipLength);
-                offset += ipLength;
+                // Pour compatibilité avec ta structure :
+                ushort startEntityId = startId;
+                ushort endEntityId = endId;
+                byte universe = 1;
+                string controllerIp = "";
 
                 items.Add(new ConfigItem(startEntityId, endEntityId, universe, controllerIp));
             }
 
             return new ConfigMessage(items);
         }
+
     }
 }

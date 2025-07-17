@@ -11,7 +11,7 @@ namespace No_Fast_No_Fun_Wpf {
 
         public MainWindow() {
             InitializeComponent();
-
+            _listener = new UdpListenerService();
             _settings = new SettingsService();
             _settings.SettingsChanged += OnSettingsChanged;
 

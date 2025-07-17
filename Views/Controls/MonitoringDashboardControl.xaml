@@ -4,38 +4,45 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d"
-             d:DesignWidth="800" d:DesignHeight="500">
+             d:DesignWidth="400" d:DesignHeight="300">
+
     <DockPanel Margin="10">
-        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,10">
+        <!-- Boutons Start/Stop et compteurs -->
+        <StackPanel DockPanel.Dock="Top"
+                Orientation="Horizontal"
+                VerticalAlignment="Center"
+                Margin="0,0,0,10">
             <Button Content="Start"
-                    Command="{Binding StartCommand}"
-                    Margin="0,0,10,0"/>
+              Command="{Binding StartCommand, Mode=OneWay}"
+              Margin="0,0,10,0"/>
             <Button Content="Stop"
-                    Command="{Binding StopCommand}"
-                    Margin="0,0,10,0"/>
-            <Button Content="Clear Log"
-                    Command="{Binding ClearLogsCommand}"
-                    Margin="0,0,10,0"/>
-            <Button Content="Clear Entités"
-                    Command="{Binding ClearEntitiesCommand}"/>
+              Command="{Binding StopCommand, Mode=OneWay}"
+              Margin="0,0,20,0"/>
+            <Button Content="Clear"
+              Command="{Binding ClearLogsCommand, Mode=OneWay }"/>
+
+            <TextBlock Text="CFG/s :"
+                 FontWeight="Bold"/>
+            <TextBlock Text="{Binding ConfigPerSecond, Mode=OneWay}"
+                 Width="40"
+                 Margin="5,0"/>
+
+            <TextBlock Text="UPD/s :"
+                 FontWeight="Bold"
+                 Margin="20,0,0,0"/>
+            <TextBlock Text="{Binding UpdatesPerSecond, Mode=OneWay}"
+                 Width="40"
+                 Margin="5,0"/>
+
+            <TextBlock Text="REM/s :"
+                 FontWeight="Bold"
+                 Margin="20,0,0,0"/>
+            <TextBlock Text="{Binding RemotePerSecond, Mode=OneWay}"
+                 Width="40"
+                 Margin="5,0"/>
         </StackPanel>
 
-        <!-- DataGrid des entités -->
-        <DataGrid ItemsSource="{Binding EntityStates}" 
-                  AutoGenerateColumns="False"
-                  IsReadOnly="True"
-                  Height="250"
-                  Margin="0,0,0,10">
-            <DataGrid.Columns>
-                <DataGridTextColumn Header="ID" Binding="{Binding EntityId}" Width="*"/>
-                <DataGridTextColumn Header="R" Binding="{Binding R}" Width="*"/>
-                <DataGridTextColumn Header="G" Binding="{Binding G}" Width="*"/>
-                <DataGridTextColumn Header="B" Binding="{Binding B}" Width="*"/>
-                <DataGridTextColumn Header="MAJ" Binding="{Binding LastUpdate, StringFormat={}{0:HH:mm:ss.fff}}" Width="*"/>
-            </DataGrid.Columns>
-        </DataGrid>
-
         <!-- Log scrolling -->
-        <ListBox ItemsSource="{Binding Logs}" Height="150" />
+        <ListBox ItemsSource="{Binding Logs, Mode=OneWay}" />
     </DockPanel>
 </UserControl>
