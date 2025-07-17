@@ -138,7 +138,7 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
                             if (x >= 0 && x < _bitmapWidth && y >= 0 && y < _bitmapHeight) {
                                 unsafe {
                                     IntPtr pBackBuffer = Bitmap.BackBuffer;
-                                    int colorData = (px.B << 16) | (px.G << 8) | (px.R);
+                                    int colorData = (px.R << 16) | (px.G << 8) | (px.B);
                                     int offset = (y * _bitmapWidth + x) * 4;
                                     if (offset >= 0 && offset + 4 <= bufferSize) {
                                         System.Runtime.InteropServices.Marshal.WriteInt32(pBackBuffer, offset, colorData);

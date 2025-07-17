@@ -130,26 +130,37 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
             EffectiveColor = Color.FromRgb(r, g, b);
         }
 
+        private IEnumerable<int> GetConfigEntities() {
+            foreach (var config in _configEditor.ConfigItems)
+                for (int i = config.StartEntityId; i <= config.EndEntityId; i++)
+                    yield return i;
+        }
+
         private UpdateMessage BuildUpdateMessage() {
             var pixels = new List<Pixel>();
-            foreach (var config in _configEditor.ConfigItems) {
-                for (int i = config.StartEntityId; i <= config.EndEntityId; i++) {
-                    if (_entityMap.ContainsKey(i))
-                        pixels.Add(new Pixel((ushort)i, EffectiveColor.R, EffectiveColor.G, EffectiveColor.B));
-                }
+            foreach (var entityId in GetConfigEntities().OrderBy(i => i)) {
+                if (_entityMap.TryGetValue(entityId, out _))
+                    pixels.Add(new Pixel((ushort)entityId, EffectiveColor.R, EffectiveColor.G, EffectiveColor.B));
             }
             return new UpdateMessage(pixels);
         }
 
         private void SendToPreview() {
-            var msg = BuildUpdateMessage();
+            var pixels = new List<Pixel>();
+            foreach (var entityId in GetConfigEntities().OrderBy(i => i)) {
+                if (_entityMap.TryGetValue(entityId, out _))
+                    pixels.Add(new Pixel((ushort)entityId, EffectiveColor.R, EffectiveColor.G, EffectiveColor.B));
+            }
+            var msg = new UpdateMessage(pixels);
             _listener.SimulateUpdate(msg);
         }
 
         private void SendToMatrix() {
             var msg = BuildUpdateMessage();
+            Debug.WriteLine($"[CONSOLE] SendToMatrix: {msg.Pixels.Count} pixels, 1st={msg.Pixels.FirstOrDefault()?.Entity}, last={msg.Pixels.LastOrDefault()?.Entity}");
             _routingService?.RouteUpdate(msg);
         }
+
 
         private void StartRainbowAnimation() {
             _rainbowTimer?.Stop();
@@ -170,17 +181,15 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
         }
 
         private UpdateMessage BuildRainbowMessage(double frameOffset) {
+            var ids = GetConfigEntities().OrderBy(i => i).ToList();
+            int count = ids.Count;
             var pixels = new List<Pixel>();
-            ushort start = (ushort)FromEntity;
-            ushort end = (ushort)ToEntity;
-            int count = end - start + 1;
-
             for (int i = 0; i < count; i++) {
                 double hue = (i * 360.0 / count + frameOffset) % 360;
                 var color = HsvToRgb(hue, 1, 1);
-                ushort entity = (ushort)(start + i);
-                if (_entityMap.ContainsKey(entity))
-                    pixels.Add(new Pixel(entity, color.R, color.G, color.B));
+                int entityId = ids[i];
+                if (_entityMap.TryGetValue(entityId, out _))
+                    pixels.Add(new Pixel((ushort)entityId, color.R, color.G, color.B));
             }
             return new UpdateMessage(pixels);
         }
@@ -238,6 +247,7 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
                 _ = ProcessMediaFile(path);
             }
         }
+
         private async Task ProcessMediaFile(string path) {
             if (path.EndsWith(".gif"))
                 await PlayGif(path);
@@ -254,14 +264,14 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
                 g.DrawImage(bitmap, 0, 0, _matrixWidth, _matrixHeight);
 
             var pixels = new List<Pixel>();
-            foreach (var kvp in _entityMap) {
-                int entityId = kvp.Key;
-                var pos = kvp.Value;
-                int x = (int)pos.X;
-                int y = (int)pos.Y;
-                if (x >= 0 && x < resized.Width && y >= 0 && y < resized.Height) {
-                    System.Drawing.Color color = resized.GetPixel(x, y);
-                    pixels.Add(new Pixel((ushort)entityId, color.R, color.G, color.B));
+            foreach (var entityId in GetConfigEntities().OrderBy(i => i)) {
+                if (_entityMap.TryGetValue(entityId, out var pos)) {
+                    int x = (int)pos.X;
+                    int y = (int)pos.Y;
+                    if (x >= 0 && x < resized.Width && y >= 0 && y < resized.Height) {
+                        System.Drawing.Color color = resized.GetPixel(x, y);
+                        pixels.Add(new Pixel((ushort)entityId, color.R, color.G, color.B));
+                    }
                 }
             }
             var updateMsg = new UpdateMessage(pixels);
@@ -289,14 +299,14 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
                             g.DrawImage(frame, 0, 0, _matrixWidth, _matrixHeight);
 
                         var pixels = new List<Pixel>();
-                        foreach (var kvp in _entityMap) {
-                            int entityId = kvp.Key;
-                            var pos = kvp.Value;
-                            int x = (int)pos.X;
-                            int y = (int)pos.Y;
-                            if (x >= 0 && x < resized.Width && y >= 0 && y < resized.Height) {
-                                var color = resized.GetPixel(x, y);
-                                pixels.Add(new Pixel((ushort)entityId, color.R, color.G, color.B));
+                        foreach (var entityId in GetConfigEntities().OrderBy(id => id)) {
+                            if (_entityMap.TryGetValue(entityId, out var pos)) {
+                                int x = (int)pos.X;
+                                int y = (int)pos.Y;
+                                if (x >= 0 && x < resized.Width && y >= 0 && y < resized.Height) {
+                                    var color = resized.GetPixel(x, y);
+                                    pixels.Add(new Pixel((ushort)entityId, color.R, color.G, color.B));
+                                }
                             }
                         }
                         var updateMsg = new UpdateMessage(pixels);
@@ -347,14 +357,14 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
 
         private UpdateMessage BuildUpdateFromMat(Mat mat) {
             var pixels = new List<Pixel>();
-            foreach (var kvp in _entityMap) {
-                int entityId = kvp.Key;
-                var pos = kvp.Value;
-                int x = (int)pos.X;
-                int y = (int)pos.Y;
-                if (x >= 0 && x < mat.Width && y >= 0 && y < mat.Height) {
-                    var color = mat.At<Vec3b>(y, x);
-                    pixels.Add(new Pixel((ushort)entityId, color[2], color[1], color[0])); // BGR → RGB
+            foreach (var entityId in GetConfigEntities().OrderBy(i => i)) {
+                if (_entityMap.TryGetValue(entityId, out var pos)) {
+                    int x = (int)pos.X;
+                    int y = (int)pos.Y;
+                    if (x >= 0 && x < mat.Width && y >= 0 && y < mat.Height) {
+                        var color = mat.At<Vec3b>(y, x);
+                        pixels.Add(new Pixel((ushort)entityId, color[2], color[1], color[0])); // BGR → RGB
+                    }
                 }
             }
             return new UpdateMessage(pixels);

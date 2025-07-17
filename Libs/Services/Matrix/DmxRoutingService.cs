@@ -29,88 +29,150 @@ namespace Services.Matrix {
         public void RouteUpdate(UpdateMessage packet) {
             _buffers.Clear();
 
+            Debug.WriteLine("=== Listing routeurs chargés en mémoire ===");
+            foreach (var router in _routers) {
+                Debug.WriteLine($"[Router] {router.Ip}");
+                foreach (var uni in router.Universes) {
+                    Debug.WriteLine($"    Univers {uni.Universe} : {uni.EntityIdStart}-{uni.EntityIdEnd} (StartAddr={uni.StartAddress})");
+                }
+            }
+            Debug.WriteLine("=== PatchMap Entries ===");
+            foreach (var patch in _patches) {
+                Debug.WriteLine($"Patch: {patch.EntityStart}-{patch.EntityEnd} U{patch.Universe}");
+            }
+            Debug.WriteLine("=======================");
+
             int pixelsRoutés = 0;
+            int pixelsPatchés = 0;
             int pixelsIgnorés = 0;
 
             foreach (Pixel pix in packet.Pixels) {
                 int entityId = pix.Entity;
 
-                // 1. PatchMap d'abord (correction locale), sinon Config principale
-                PatchMapEntryDto patch = _patches.FirstOrDefault(p =>
-                    entityId >= p.EntityStart && entityId <= p.EntityEnd);
+                // 1. Cherche d'abord dans la config principale
+                ConfigItem config = _configItems.FirstOrDefault(c =>
+                    entityId >= c.StartEntityId && entityId <= c.EndEntityId);
 
-                ConfigItem config = null;
+                PatchMapEntryDto patch = null;
+
                 byte universe;
-                string controllerIp;
+                string controllerIp = null;
+                int dmxOffset = -1;
+
+                if (config != null) {
+                    universe = config.Universe;
+                    controllerIp = config.ControllerIp;
+
+                    // Recherche du routeur qui gère ce mapping
+                    var possibleRouters = _routers.Where(r =>
+                        r.Universes.Any(u =>
+                            entityId >= u.EntityIdStart &&
+                            entityId <= u.EntityIdEnd &&
+                            universe == u.Universe)).ToList();
+
+                    if (possibleRouters.Count == 0) {
+                        pixelsIgnorés++;
+                        Debug.WriteLine($"[Route] Entity {entityId} ignorée (pas de routeur pour univers {universe})");
+                        continue;
+                    }
+
+                    var router = possibleRouters.FirstOrDefault(r =>
+                        r.Ip == controllerIp) ?? possibleRouters.First();
+
+                    var map = router.Universes.FirstOrDefault(u =>
+                        entityId >= u.EntityIdStart &&
+                        entityId <= u.EntityIdEnd &&
+                        universe == u.Universe);
+
+                    if (map == null) {
+                        pixelsIgnorés++;
+                        Debug.WriteLine($"[Route] Entity {entityId} ignorée (pas de map dans router pour univers {universe})");
+                        continue;
+                    }
+
+                    int pixelIndex = entityId - map.EntityIdStart;
+                    dmxOffset = map.StartAddress + pixelIndex * 3;
+                    var key = (router.Ip, universe);
+                    var buf = _buffers.GetOrAdd(key, _ => new byte[512]);
+
+                    if (dmxOffset + 2 < 512) {
+                        buf[dmxOffset + 0] = pix.R;
+                        buf[dmxOffset + 1] = pix.G;
+                        buf[dmxOffset + 2] = pix.B;
+                        pixelsRoutés++;
+                    }
+                    else {
+                        pixelsIgnorés++;
+                        Debug.WriteLine($"[Route] Entity {entityId} ignorée (overflow DMX offset)");
+                    }
+                    continue;
+                }
+
+                // 2. Si pas trouvé dans la config principale, tente le patchmap (cas exceptionnel)
+                patch = _patches.FirstOrDefault(p =>
+                    entityId >= p.EntityStart && entityId <= p.EntityEnd);
 
                 if (patch != null) {
                     universe = patch.Universe;
-                    controllerIp = null; // PatchMap ne définit pas l’IP, il faudra la retrouver dans la config
-                }
-                else {
-                    config = _configItems.FirstOrDefault(c =>
-                        entityId >= c.StartEntityId && entityId <= c.EndEntityId);
+                    controllerIp = null; // PatchMap ne définit pas l’IP, il faudra la retrouver dans la config ou les routeurs
 
-                    if (config == null) {
+                    var possibleRouters = _routers.Where(r =>
+                        r.Universes.Any(u =>
+                            entityId >= u.EntityIdStart &&
+                            entityId <= u.EntityIdEnd &&
+                            universe == u.Universe)).ToList();
+
+                    if (possibleRouters.Count == 0) {
                         pixelsIgnorés++;
+                        Debug.WriteLine($"[Patch] Entity {entityId} ignorée (pas de routeur pour univers {universe} via PatchMap)");
                         continue;
                     }
-                    universe = config.Universe;
-                    controllerIp = config.ControllerIp;
-                }
 
-                // 2. Sélection du routeur : priorité PatchMap (univers+ID) sinon Config
-                var possibleRouters = _routers.Where(r =>
-                    r.Universes.Any(u =>
+                    var router = possibleRouters.First();
+
+                    var map = router.Universes.FirstOrDefault(u =>
                         entityId >= u.EntityIdStart &&
                         entityId <= u.EntityIdEnd &&
-                        universe == u.Universe)).ToList();
+                        universe == u.Universe);
 
-                if (possibleRouters.Count == 0) {
-                    pixelsIgnorés++;
+                    if (map == null) {
+                        pixelsIgnorés++;
+                        Debug.WriteLine($"[Patch] Entity {entityId} ignorée (pas de map dans router pour univers {universe} via PatchMap)");
+                        continue;
+                    }
+
+                    int pixelIndex = entityId - map.EntityIdStart;
+                    dmxOffset = map.StartAddress + pixelIndex * 3;
+                    var key = (router.Ip, universe);
+                    var buf = _buffers.GetOrAdd(key, _ => new byte[512]);
+
+                    if (dmxOffset + 2 < 512) {
+                        buf[dmxOffset + 0] = pix.R;
+                        buf[dmxOffset + 1] = pix.G;
+                        buf[dmxOffset + 2] = pix.B;
+                        pixelsPatchés++;
+                    }
+                    else {
+                        pixelsIgnorés++;
+                        Debug.WriteLine($"[Patch] Entity {entityId} ignorée (overflow DMX offset via PatchMap)");
+                    }
                     continue;
                 }
 
-                var router = possibleRouters.FirstOrDefault(r =>
-                    controllerIp == null || r.Ip == controllerIp) ?? possibleRouters.First();
-
-                // 3. Recherche du mapping dans le routeur pour cet univers et ID
-                var map = router.Universes.FirstOrDefault(u =>
-                    entityId >= u.EntityIdStart &&
-                    entityId <= u.EntityIdEnd &&
-                    universe == u.Universe);
-
-                if (map == null) {
-                    pixelsIgnorés++;
-                    continue;
-                }
-
-                int pixelIndex = entityId - map.EntityIdStart;
-                int dmxOffset = map.StartAddress + pixelIndex * 3;
-
-                // 4. DMX packing
-                var key = (router.Ip, universe);
-                var buf = _buffers.GetOrAdd(key, _ => new byte[512]);
-
-                if (dmxOffset + 2 < 512) {
-                    buf[dmxOffset + 0] = pix.R;
-                    buf[dmxOffset + 1] = pix.G;
-                    buf[dmxOffset + 2] = pix.B;
-                    pixelsRoutés++;
-                }
-                else {
-                    pixelsIgnorés++;
-                }
+                // 3. Sinon, ignoré
+                pixelsIgnorés++;
+                Debug.WriteLine($"[Ignore] Entity {entityId} ignorée (pas dans config ni patchmap)");
             }
 
-            // 5. Envoi ArtNet (par ip/universe)
+            // 4. Envoi ArtNet (par ip/universe)
             foreach (var kv in _buffers) {
                 var (ip, uni) = kv.Key;
                 var data = kv.Value;
                 _artNet.SendDmxFrame(ip, 6454, uni, data);
             }
 
-            //Debug.WriteLine($"[Résumé] Pixels routés = {pixelsRoutés}, ignorés = {pixelsIgnorés}, total = {packet.Pixels.Count}");
+            Debug.WriteLine($"[Résumé] Pixels routés = {pixelsRoutés}, patchés = {pixelsPatchés}, ignorés = {pixelsIgnorés}, total = {packet.Pixels.Count}");
         }
     }
 }
+
