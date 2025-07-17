@@ -342,43 +342,30 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
                 return;
             }
 
-            // Timestamps en ms
-            double videoStart = 0;
-            double sysStart = 0;
+            int delay = (int)(1000.0 / 60); // 60 fps cible, peu importe la vidéo
             using var frame = new Mat();
 
             try {
-                videoStart = capture.PosMsec;
-                sysStart = Stopwatch.GetTimestamp() / (double)Stopwatch.Frequency * 1000.0; // en ms
-
                 while (!token.IsCancellationRequested) {
                     if (!capture.Read(frame) || frame.Empty()) {
                         capture.Set(VideoCaptureProperties.PosFrames, 0);
-                        videoStart = capture.PosMsec;
-                        sysStart = Stopwatch.GetTimestamp() / (double)Stopwatch.Frequency * 1000.0;
                         continue;
                     }
-
-                    double currentVideoMs = capture.PosMsec - videoStart;
-                    double currentSysMs = (Stopwatch.GetTimestamp() / (double)Stopwatch.Frequency * 1000.0) - sysStart;
-
-                    double diff = currentVideoMs - currentSysMs;
-
-                    if (diff > 1) {
-                        await Task.Delay((int)diff, token);
-                    } // si diff < 0, on a du retard, on saute l’attente et on affiche direct
-
                     using var resized = frame.Resize(new OpenCvSharp.Size(_matrixWidth, _matrixHeight));
                     var updateMsg = BuildUpdateFromMat(resized);
                     _lastImageMsg = updateMsg;
                     _listener.SimulateUpdate(updateMsg);
                     _routingService.RouteUpdate(updateMsg);
+
+                    await Task.Delay(delay, token); // temporisation fixe, peu importe la frame source
                 }
             }
             catch (TaskCanceledException) {
                 Debug.WriteLine("Lecture de la vidéo arrêtée.");
             }
         }
+
+
 
 
 
