@@ -10,19 +10,14 @@
             <Button Content="Save"
               Command="{Binding SaveCommand, Mode=OneWay}"
               Margin="0,0,5,0"/>
-            <Button Content="Import CSV"
-              Command="{Binding ImportCommand, Mode=OneWay}"
-              Margin="0,0,5,0"/>
-            <Button Content="Export CSV"
-              Command="{Binding ExportCommand, Mode=OneWay}"/>
         </StackPanel>
 
         <!-- Grille des mappings -->
         <DataGrid ItemsSource="{Binding Entries, Mode=OneWay}"
-              SelectedItem="{Binding SelectedEntry, Mode=TwoWay}"
-              AutoGenerateColumns="False"
-              CanUserAddRows="False"
-              Margin="0,10,0,0">
+          SelectedItem="{Binding SelectedEntry, Mode=TwoWay}"
+          AutoGenerateColumns="False"
+          CanUserAddRows="False"
+          Margin="0,10,0,0">
             <DataGrid.Columns>
                 <DataGridTextColumn Header="Entity Start"
                             Binding="{Binding EntityStart, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
@@ -30,13 +25,11 @@
                 <DataGridTextColumn Header="Entity End"
                             Binding="{Binding EntityEnd, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                             Width="*"/>
-                <DataGridTextColumn Header="Universe Start"
-                            Binding="{Binding UniverseStart, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                            Width="*"/>
-                <DataGridTextColumn Header="Universe End"
-                            Binding="{Binding UniverseEnd, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                <DataGridTextColumn Header="Universe"
+                            Binding="{Binding Universe, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                             Width="*"/>
             </DataGrid.Columns>
         </DataGrid>
+
     </DockPanel>
 </UserControl>

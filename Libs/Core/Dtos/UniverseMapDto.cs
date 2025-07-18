@@ -13,10 +13,7 @@ namespace Core.Dtos
         public int EntityEnd {
             get; set;
         }
-        public byte UniverseStart {
-            get; set;
-        }
-        public byte UniverseEnd {
+        public byte Universe {
             get; set;
         }
         public int StartAddress {

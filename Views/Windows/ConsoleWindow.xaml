@@ -59,6 +59,7 @@
             <Button Content="Send to Matrix" Margin="0,10,0,0" Width="100" Command="{Binding SendToMatrixCommand}"/>
             <Button Content="Load Media" Margin="10,10,10,0" Width="100" Command="{Binding LoadMediaCommand}"/>
             <Button Content="Stop Media" Margin="0,10,10,0" Width="100" Command="{Binding StopMediaCommand}"/>
+            <Button Content="SendImageToMAtrix" Margin="0,10,10,0" Width="100" Command="{Binding SendCurrentFrameToMatrixCommand}"/>
         </StackPanel>
     </Grid>
 </Window>

@@ -7,12 +7,10 @@
         public int EntityEnd {
             get; set;
         }
-        public byte UniverseStart {
+        public byte Universe {
             get; set;
         }
-        public byte UniverseEnd {
-            get; set;
-        }
+
         public int X {
             get; set;
         }

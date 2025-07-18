@@ -1,72 +1,87 @@
 ﻿using System.Windows;
 using Core.Dtos;
-using Core.Models;        
-using Services.Config;     
-using Services.Matrix;     
-using No_Fast_No_Fun_Wpf.Services.Network;  
-using No_Fast_No_Fun_Wpf.ViewModels;        
+using Core.Models;
+using No_Fast_No_Fun_Wpf.Services.Network;
+using No_Fast_No_Fun_Wpf.ViewModels;
+using Services.Config;
+using Services.Matrix;
 
 namespace No_Fast_No_Fun_Wpf {
     public partial class App : Application {
-        private UdpListenerService _listener;
-        private ArtNetDmxController _artNetController;
+        private UdpListenerService _listener = null!;
+        private ArtNetDmxController _artNetController = null!;
 
         protected override void OnStartup(StartupEventArgs e) {
             base.OnStartup(e);
 
-            // 1) Démarrage unique de l'écoute eHub UDP
-            _listener = new UdpListenerService();
-            _listener.Start(8765);
+            // 1. Charge la config appli (unique source de vérité sur disque)
+            var configService = new JsonFileConfigService<AppConfigDto>("app_config.json");
+            var appConfig = configService.Load();
 
-            // 2) Chargement de la config DMX (dmxsettings.json)
-            var dmxService = new JsonFileConfigService<DmxSettingsDto>("dmxsettings.json");
-            DmxSettingsDto dmxSettings = dmxService.Load();
-
-            // 3) Création du contrôleur Art-Net avec la liste des routeurs
+            // 2. Instancie le service ArtNet + listener UDP
             _artNetController = new ArtNetDmxController();
+            _listener = new UdpListenerService();
+            _listener.Start(appConfig.ListeningPort);
 
-            // 4) Branche chaque update eHub vers l’envoi DMX Art-Net
-            _listener.OnUpdatePacket += packet => {
-                foreach (var router in dmxSettings.Routers) {
-                    // Prépare un buffer par univers mappé
-                    var frames = new Dictionary<byte, byte[]>();
-                    foreach (var map in router.Universes)
-                        for (byte uni = map.UniverseStart; uni <= map.UniverseEnd; uni++)
-                            frames[uni] = new byte[512];
+            // 3. Instancie les ViewModels centraux
+            var configEditorVm = new ConfigEditorViewModel();
+            var patchMapManagerVm = new PatchMapManagerViewModel(configEditorVm);
 
-                    // Remplit les buffers d’après les entités
-                    foreach (var px in packet.Pixels) {
-                        foreach (var map in router.Universes) {
-                            if (px.Entity >= map.EntityStart && px.Entity <= map.EntityEnd) {
-                                int localIndex = px.Entity - map.EntityStart;
-                                byte uni = (byte)(map.UniverseStart + (localIndex / 170));
-                                int channel = (localIndex % 170) * 3;
+            // 4. Génère les routeurs DYNAMIQUEMENT à partir de la config en mémoire
+            var routers = BuildRoutersFromConfig(configEditorVm.ConfigItems.Select(x => x.ToModel()));
 
-                                var buf = frames[uni];
-                                buf[channel + 0] = px.R;
-                                buf[channel + 1] = px.G;
-                                buf[channel + 2] = px.B;
-                                break;
-                            }
-                        }
-                    }
+            // 5. Service de routage
+            var routingSvc = new DmxRoutingService(
+                routers,
+                configEditorVm.ConfigItems.Select(x => x.ToModel()),
+                patchMapManagerVm.Entries.Select(x => x.ToModel()),
+                _artNetController
+            );
 
+            var previewVm = new MatrixPreviewViewModel(_listener, routingSvc, patchMapManagerVm, configEditorVm);
 
-                    // Envoie toutes les trames univers par univers
-                    foreach (var kv in frames) {
-                        byte universe = kv.Key;
-                        byte[] data = kv.Value;
-                        _artNetController.SendDmxFrame(router.Ip, router.Port, universe, data);
-                    }
-                }
-            };
+            // 6. Routage DMX
+            _listener.OnUpdatePacket += routingSvc.RouteUpdate;
+            _listener.OnUpdatePacket += previewVm.HandleUpdateMessage;
 
-            // 5) Instanciation et affichage de la fenêtre principale
-            var mainVm = new MainWindowViewModel(_listener, _artNetController);
+            // 7. MainWindowViewModel DI
+            var mainVm = new MainWindowViewModel(
+                _listener,
+                _artNetController,
+                configEditorVm,
+                patchMapManagerVm,
+                previewVm,
+                appConfig
+            );
+
+            // 8. MainWindow (view) + DataContext
             var window = new MainWindow {
                 DataContext = mainVm
             };
             window.Show();
+        }
+
+        // ...
+
+        private List<DmxRouterSettings> BuildRoutersFromConfig(IEnumerable<ConfigItem> configItems) {
+            var routers = new List<DmxRouterSettings>();
+            foreach (var cfg in configItems) {
+                if (string.IsNullOrEmpty(cfg.ControllerIp))
+                    continue;
+                var router = routers.FirstOrDefault(r => r.Ip == cfg.ControllerIp);
+                if (router == null) {
+                    router = new DmxRouterSettings();
+                    router.Ip = cfg.ControllerIp;
+                    routers.Add(router);
+                }
+                router.Universes.Add(new UniverseMap {
+                    Universe = cfg.Universe,
+                    EntityIdStart = cfg.StartEntityId,
+                    EntityIdEnd = cfg.EndEntityId,
+                    StartAddress = 0
+                });
+            }
+            return routers;
         }
 
         protected override void OnExit(ExitEventArgs e) {
@@ -76,3 +91,4 @@ namespace No_Fast_No_Fun_Wpf {
         }
     }
 }
+

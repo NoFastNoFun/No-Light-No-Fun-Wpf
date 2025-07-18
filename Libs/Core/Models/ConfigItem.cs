@@ -1,22 +1,11 @@
 ﻿namespace Core.Models {
     public class ConfigItem {
         // Nouveau constructeur officiel
-        public ConfigItem(ushort startEntityId, ushort endEntityId,
-                          byte startUniverse, byte endUniverse,
-                          string controllerIp) {
+        public ConfigItem(ushort startEntityId, ushort endEntityId, byte universe, string controllerIp) {
             StartEntityId = startEntityId;
             EndEntityId = endEntityId;
-            StartUniverse = startUniverse;
-            EndUniverse = endUniverse;
+            Universe = universe;
             ControllerIp = controllerIp;
-        }
-
-        // Ancienne surcharge pour eHub
-        public ConfigItem(ushort startIndex, ushort startId,
-                          ushort endIndex, ushort endId)
-            : this(startIndex, endIndex,
-                   startUniverse: 0, endUniverse: 0,
-                   controllerIp: string.Empty) {
         }
 
         public ushort StartEntityId {
@@ -25,15 +14,13 @@
         public ushort EndEntityId {
             get; set;
         }
-        public byte StartUniverse {
-            get; set;
-        }
-        public byte EndUniverse {
+        public byte Universe {
             get; set;
         }
         public string ControllerIp {
             get; set;
         }
+
 
         public ConfigItem() {
         }

@@ -7,8 +7,7 @@ namespace No_Fast_No_Fun_Wpf.ViewModels
     public class PatchMapEntryViewModel : INotifyPropertyChanged {
         int _entityStart;
         int _entityEnd;
-        byte _universeStart;
-        byte _universeEnd;
+        byte _universe;
         int _x;
         int _y;
         int _width;
@@ -23,14 +22,9 @@ namespace No_Fast_No_Fun_Wpf.ViewModels
             set => Set(ref _entityEnd, value);
         }
 
-        public byte UniverseStart {
-            get => _universeStart;
-            set => Set(ref _universeStart, value);
-        }
-
-        public byte UniverseEnd {
-            get => _universeEnd;
-            set => Set(ref _universeEnd, value);
+        public byte Universe {
+            get => _universe;
+            set => Set(ref _universe, value);
         }
 
         public int X {
@@ -48,33 +42,36 @@ namespace No_Fast_No_Fun_Wpf.ViewModels
             set => Set(ref _width, value);
         }
 
-        public int EntityIdStart => EntityStart;
-        public int EntityIdEnd => EntityEnd;
-
         public PatchMapEntryViewModel() {
-            Width = 128; 
+            Width = 128;
         }
 
         public PatchMapEntryViewModel(PatchMapEntryDto dto) {
             EntityStart = dto.EntityStart;
             EntityEnd = dto.EntityEnd;
-            UniverseStart = dto.UniverseStart;
-            UniverseEnd = dto.UniverseEnd;
+            Universe = dto.Universe;
             X = dto.X;
             Y = dto.Y;
             Width = dto.Width > 0 ? dto.Width : 128;
         }
 
-        public PatchMapEntryDto ToModel()
-            => new PatchMapEntryDto {
-                EntityStart = this.EntityStart,
-                EntityEnd = this.EntityEnd,
-                UniverseStart = this.UniverseStart,
-                UniverseEnd = this.UniverseEnd,
-                X = this.X,
-                Y = this.Y,
-                Width = this.Width
-            };
+        // Surchargé pour initialisation depuis config métier
+        public PatchMapEntryViewModel(ushort start, ushort end, byte universe) {
+            EntityStart = start;
+            EntityEnd = end;
+            Universe = universe;
+            Width = 128;
+            // Si tu veux gérer X/Y, ajoute-les en paramètres
+        }
+
+        public PatchMapEntryDto ToModel() => new PatchMapEntryDto {
+            EntityStart = this.EntityStart,
+            EntityEnd = this.EntityEnd,
+            Universe = this.Universe,
+            X = this.X,
+            Y = this.Y,
+            Width = this.Width
+        };
 
         public event PropertyChangedEventHandler? PropertyChanged;
         void Set<T>(ref T field, T value, [CallerMemberName] string? propName = null) {
@@ -85,3 +82,4 @@ namespace No_Fast_No_Fun_Wpf.ViewModels
         }
     }
 }
+

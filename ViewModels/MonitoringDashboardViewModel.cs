@@ -44,7 +44,7 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
         }
         DateTime lastLogTime = DateTime.MinValue;
 
-     
+
         public MonitoringDashboardViewModel(UdpListenerService sharedListener) {
             Logs = new ObservableCollection<string>();
             _listener = sharedListener;
