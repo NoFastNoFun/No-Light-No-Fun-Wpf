@@ -128,25 +128,32 @@ namespace No_Fast_No_Fun_Wpf.Services.Network {
 
                     case 99: // (Supposons) Unity RGB raw packet
                         try {
-                            if (_unityIndexToId == null || _entityMap == null) {
-                                Debug.WriteLine("[UDP] Unity mapping non initialisé !");
+                            if (_unityIndexToId == null || _entityMap == null || _unityIndexToId.Count == 0 || _entityMap.Count == 0) {
+                                Debug.WriteLine("[UDP] Unity mapping not initialized or empty!");
                                 break;
                             }
                             int baseOffset = 6;
                             int pixelCount = (data.Length - baseOffset) / 3;
-                            var pixels = new List<Pixel>();
-                            for (int i = 0; i < pixelCount; i++) {
+
+                            if (pixelCount != _unityIndexToId.Count) {
+                                Debug.WriteLine($"[UDP] Unity packet pixel count mismatch! Received: {pixelCount}, Expected: {_unityIndexToId.Count}");
+                            }
+
+                            int minCount = Math.Min(pixelCount, _unityIndexToId.Count);
+                            var pixels = new List<Pixel>(minCount);
+
+                            for (int i = 0; i < minCount; i++) {
                                 int idx = baseOffset + i * 3;
                                 if (idx + 3 > data.Length)
                                     break;
                                 byte r = data[idx];
                                 byte g = data[idx + 1];
                                 byte b = data[idx + 2];
-                                if (i < _unityIndexToId.Count) {
-                                    var entityId = _unityIndexToId[i];
-                                    if (_entityMap.ContainsKey(entityId)) {
-                                        pixels.Add(new Pixel((ushort)entityId, r, g, b));
-                                    }
+                                var entityId = _unityIndexToId[i];
+                                if (_entityMap.ContainsKey(entityId)) {
+                                    pixels.Add(new Pixel((ushort)entityId, r, g, b));
+                                } else {
+                                    Debug.WriteLine($"[UDP] EntityId {entityId} at index {i} not in entity map, skipping.");
                                 }
                             }
                             var msg = new UpdateMessage(pixels);
