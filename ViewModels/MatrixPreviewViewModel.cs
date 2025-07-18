@@ -28,8 +28,10 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
             get => _bitmap;
             set => SetProperty(ref _bitmap, value);
         }
-        private int _targetWidth = 128;
-        private int _targetHeight = 128;
+
+        // Remove hardcoded target width/height
+        // private int _targetWidth = 128;
+        // private int _targetHeight = 128;
 
         private readonly Dictionary<int, Color> _currentColors = new();
         private readonly Dictionary<int, DateTime> _lastUpdateTime = new();
@@ -66,6 +68,7 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
         }
 
         public void OnViewActivated() {
+
             string unityJsonPath = @"C:\Users\banda\Pictures\Screenshots\entity_config.json";
             var (entityMap, unityIndexToId) = LoadFromJsonWithIndex(unityJsonPath, _targetWidth, _targetHeight);
 
@@ -76,20 +79,25 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
 
             _entityMap = entityMap;
             _unityIndexToId = unityIndexToId;
+
             BuildPixelsFromMap();
         }
 
 
 
         private void BuildPixelsFromMap() {
+            if (_entityMap == null || _entityMap.Count == 0) {
+                ShowError("Entity map is empty or invalid. Please load a valid layout.");
+                return;
+            }
             int maxX = (int)_entityMap.Values.Max(p => p.X);
             int maxY = (int)_entityMap.Values.Max(p => p.Y);
-            InitializeBitmap();
+            InitializeBitmap(maxX + 1, maxY + 1);
         }
 
-        private void InitializeBitmap() {
-            _bitmapWidth = _targetWidth;
-            _bitmapHeight = _targetHeight;
+        private void InitializeBitmap(int width, int height) {
+            _bitmapWidth = width;
+            _bitmapHeight = height;
             _stride = (_bitmapWidth * _pixelFormat.BitsPerPixel + 7) / 8;
 
             Bitmap = new WriteableBitmap(
@@ -111,6 +119,7 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
         }
 
         public void HandleUpdateMessage(UpdateMessage msg) {
+
             try {
                 if (msg?.Pixels == null || msg.Pixels.Count == 0)
                     return;
@@ -164,16 +173,7 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
                 Debug.WriteLine($"HandleUpdateMessage exception: {ex}");
             }
         }
-
-
-
-
-        public void LoadJson() {
-            var dialog = new OpenFileDialog {
-                Title = "Charger la configuration Unity",
-                Filter = "Fichiers JSON (*.json)|*.json"
             };
-
             if (dialog.ShowDialog() == true) {
                 var (entityMap, unityIndexToId) = LoadFromJsonWithIndex(dialog.FileName, _targetWidth, _targetHeight);
 
@@ -230,8 +230,12 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
                         );
 
             return (map, idList);
+
         }
 
+        private void ShowError(string message) {
+            System.Windows.MessageBox.Show(message, "Preview Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
 
         public static Dictionary<int, Point3D> GenerateVirtualEntityMap() {
             var map = new Dictionary<int, Point3D>();

@@ -111,7 +111,12 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
             return map;
         }
 
+
         public Dictionary<int, (int x, int y)> GetEntityToPositionMap() {
+            if (Entries.Count == 0)
+            {
+                return GenerateEntityMapLikeBackend();
+            }
             var map = new Dictionary<int, (int x, int y)>();
             foreach (var entry in Entries) {
                 if (entry.Width <= 0)
