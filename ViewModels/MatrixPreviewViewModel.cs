@@ -34,6 +34,8 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
         private readonly Dictionary<int, Color> _currentColors = new();
         private readonly Dictionary<int, DateTime> _lastUpdateTime = new();
         private const int TTL_MS = 150;
+        private readonly Dictionary<int, ushort> _lastPacketSequence = new();
+        private ushort _expectedSequence = 0;
 
         private int _bitmapWidth;
         private int _bitmapHeight;
@@ -45,6 +47,7 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
         private readonly UdpListenerService _listener;
         private Dictionary<int, Point3D> _entityMap = new();
         private DmxRoutingService _routingService;
+        private System.Timers.Timer _cleanupTimer;
      
 
         public ICommand OpenConsoleCommand {
@@ -63,6 +66,11 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
             OpenConsoleCommand = new RelayCommand(_ => OpenConsole());
             LoadJsonCommand = new RelayCommand(_ => LoadJson());
             _configEditor = configEditor;
+            
+            // Initialize cleanup timer to remove stale pixels
+            _cleanupTimer = new System.Timers.Timer(TTL_MS);
+            _cleanupTimer.Elapsed += (s, e) => CleanupStalePixels();
+            _cleanupTimer.Start();
         }
 
         public void OnViewActivated() {
@@ -124,7 +132,10 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
                     if (Bitmap.BackBuffer == IntPtr.Zero || bufferSize <= 0)
                         return;
 
-                    // Mise à jour de l’état mémoire pour les pixels reçus
+                    var now = DateTime.Now;
+                    bool hasValidPixels = false;
+
+                    // Update colors and track timing for received pixels
                     foreach (var px in msg.Pixels) {
                         if (px == null)
                             continue;
@@ -133,35 +144,87 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
 
                         var color = Color.FromRgb(px.R, px.G, px.B);
                         _currentColors[px.Entity] = color;
+                        _lastUpdateTime[px.Entity] = now;
+                        hasValidPixels = true;
                     }
 
-                    // Affichage : réécrit tous les pixels mémorisés à chaque frame
-                    Bitmap.Lock();
-                    unsafe {
-                        IntPtr pBackBuffer = Bitmap.BackBuffer;
-                        System.Span<byte> span = new Span<byte>((void*)pBackBuffer, bufferSize);
-                        span.Clear();
-
-                        foreach (var kv in _currentColors) {
-                            if (_entityMap.TryGetValue(kv.Key, out var pos)) {
-                                int x = (int)pos.X;
-                                int y = (int)pos.Y;
-                                if (x >= 0 && x < _bitmapWidth && y >= 0 && y < _bitmapHeight) {
-                                    var c = kv.Value;
-                                    int colorData = (c.R << 16) | (c.G << 8) | c.B;
-                                    int offset = (y * _bitmapWidth + x) * 4;
-                                    if (offset >= 0 && offset + 4 <= bufferSize)
-                                        System.Runtime.InteropServices.Marshal.WriteInt32(pBackBuffer, offset, colorData);
-                                }
-                            }
-                        }
+                    // If we received valid pixels, update the display
+                    if (hasValidPixels) {
+                        UpdateDisplay();
                     }
-                    Bitmap.AddDirtyRect(new Int32Rect(0, 0, _bitmapWidth, _bitmapHeight));
-                    Bitmap.Unlock();
                 });
             }
             catch (Exception ex) {
                 Debug.WriteLine($"HandleUpdateMessage exception: {ex}");
+            }
+        }
+
+        private void CleanupStalePixels() {
+            try {
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    if (Bitmap == null || _entityMap == null || _entityMap.Count == 0)
+                        return;
+
+                    var now = DateTime.Now;
+                    var staleEntities = new List<int>();
+
+                    // Find pixels that haven't been updated recently
+                    foreach (var kvp in _lastUpdateTime) {
+                        if ((now - kvp.Value).TotalMilliseconds > TTL_MS) {
+                            staleEntities.Add(kvp.Key);
+                        }
+                    }
+
+                    // Remove stale pixels
+                    foreach (var entityId in staleEntities) {
+                        _currentColors.Remove(entityId);
+                        _lastUpdateTime.Remove(entityId);
+                    }
+
+                    // Update display if we removed stale pixels
+                    if (staleEntities.Count > 0) {
+                        UpdateDisplay();
+                        Debug.WriteLine($"[CLEANUP] Removed {staleEntities.Count} stale pixels");
+                    }
+                });
+            }
+            catch (Exception ex) {
+                Debug.WriteLine($"CleanupStalePixels exception: {ex}");
+            }
+        }
+
+        private void UpdateDisplay() {
+            try {
+                int bufferSize = _bitmapWidth * _bitmapHeight * 4;
+                if (Bitmap.BackBuffer == IntPtr.Zero || bufferSize <= 0)
+                    return;
+
+                Bitmap.Lock();
+                unsafe {
+                    IntPtr pBackBuffer = Bitmap.BackBuffer;
+                    System.Span<byte> span = new Span<byte>((void*)pBackBuffer, bufferSize);
+                    span.Clear();
+
+                    foreach (var kv in _currentColors) {
+                        if (_entityMap.TryGetValue(kv.Key, out var pos)) {
+                            int x = (int)pos.X;
+                            int y = (int)pos.Y;
+                            if (x >= 0 && x < _bitmapWidth && y >= 0 && y < _bitmapHeight) {
+                                var c = kv.Value;
+                                int colorData = (c.R << 16) | (c.G << 8) | c.B;
+                                int offset = (y * _bitmapWidth + x) * 4;
+                                if (offset >= 0 && offset + 4 <= bufferSize)
+                                    System.Runtime.InteropServices.Marshal.WriteInt32(pBackBuffer, offset, colorData);
+                            }
+                        }
+                    }
+                }
+                Bitmap.AddDirtyRect(new Int32Rect(0, 0, _bitmapWidth, _bitmapHeight));
+                Bitmap.Unlock();
+            }
+            catch (Exception ex) {
+                Debug.WriteLine($"UpdateDisplay exception: {ex}");
             }
         }
 
@@ -185,6 +248,11 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
             }
         }
 
+        public void Dispose() {
+            _cleanupTimer?.Stop();
+            _cleanupTimer?.Dispose();
+            _listener.OnUpdatePacket -= HandleUpdateMessage;
+        }
 
 
         public static (Dictionary<int, Point3D> entityMap, List<int> unityIndexToId) LoadFromJsonWithIndex(string file, int targetWidth, int targetHeight) {

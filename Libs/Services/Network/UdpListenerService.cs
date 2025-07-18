@@ -25,6 +25,12 @@ namespace No_Fast_No_Fun_Wpf.Services.Network {
             get; set;
         }
 
+        // Packet statistics for debugging
+        private int _totalPacketsReceived = 0;
+        private int _unityPacketsReceived = 0;
+        private DateTime _lastStatsLog = DateTime.Now;
+        private readonly object _statsLock = new object();
+
 
         public int? UniverseToListen {
             get => _universe;
@@ -77,14 +83,25 @@ namespace No_Fast_No_Fun_Wpf.Services.Network {
                     continue;
                 }
 
-                // Vérifie l’en-tête e      HuB
+                // Vérifie l'en-tête e      HuB
                 if (data[0] != (byte)'e' || data[1] != (byte)'H' || data[2] != (byte)'u' || data[3] != (byte)'B') {
                     continue;
                 }
 
                 int opcode = data[4];
                 int universe = data[5];
-            
+
+                // Track packet statistics
+                lock (_statsLock) {
+                    _totalPacketsReceived++;
+                    if (opcode == 99) _unityPacketsReceived++;
+                    
+                    // Log statistics every 5 seconds
+                    if ((DateTime.Now - _lastStatsLog).TotalSeconds >= 5) {
+                        Debug.WriteLine($"[UDP STATS] Total: {_totalPacketsReceived}, Unity: {_unityPacketsReceived}");
+                        _lastStatsLog = DateTime.Now;
+                    }
+                }
 
                 if (_universe.HasValue && universe != _universe.Value) {
                   
