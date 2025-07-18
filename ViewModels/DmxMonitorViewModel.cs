@@ -66,7 +66,7 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
         void OnFrameSent(string ip, byte universe, int length) {
             _frameCount++;
             _octetCount += length;
-            Logs.Add($"[{DateTime.Now:HH:mm:ss}] Sent {length}B → {ip} U{universe}");
+           
         }
 
         public void Dispose() {
