@@ -186,55 +186,6 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
         }
 
 
-        public static Dictionary<int, Point3D> LoadFromJson(int targetWidth, int targetHeight) {
-            var dialog = new OpenFileDialog {
-                Title = "Charger la configuration Unity",
-                Filter = "Fichiers JSON (*.json)|*.json"
-            };
-
-            if (dialog.ShowDialog() == true) {
-                var json = File.ReadAllText(dialog.FileName);
-                var container = JsonConvert.DeserializeObject<EntityJsonContainer>(json);
-
-                if (container?.Pixels == null || container.Pixels.Count == 0)
-                    return new();
-
-                const int minEntity = 100;
-                const int maxEntity = 19858;
-
-                var filtered = container.Pixels
-                    .Where(p => p.Id >= minEntity && p.Id <= maxEntity)
-                    .ToList();
-
-                if (filtered.Count == 0) {
-                    Debug.WriteLine("[ERROR] Aucun pixel dans la plage d'entités sélectionnée.");
-                    return new();
-                }
-
-                double minX = filtered.Min(p => p.X);
-                double maxX = filtered.Max(p => p.X);
-                double minY = filtered.Min(p => p.Y);
-                double maxY = filtered.Max(p => p.Y);
-
-                double rangeX = maxX - minX;
-                double rangeY = maxY - minY;
-
-
-
-                var map = filtered.ToDictionary(
-                        e => e.Id,
-                        e => new Point3D(
-                            ((e.X - minX) / rangeX) * (targetWidth - 1),
-                            ((1.0 - (e.Y - minY) / rangeY)) * (targetHeight - 1),
-                                0
-                        )
-                );
-                return map;
-            }
-
-            return new();
-        }
-
 
         public static (Dictionary<int, Point3D> entityMap, List<int> unityIndexToId) LoadFromJsonWithIndex(string file, int targetWidth, int targetHeight) {
             var json = File.ReadAllText(file);
@@ -267,16 +218,16 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
             double rangeX = maxX - minX;
             double rangeY = maxY - minY;
 
-       
+
 
             var map = filtered.ToDictionary(
-                e => e.Id,
-                e => new Point3D(
-                    ((e.X - minX) / rangeX) * (targetWidth - 1),
-                    ((e.Y - minY) / rangeY) * (targetHeight - 1),
-                    0
-                )
-            );
+                    e => e.Id,
+                    e => new Point3D(
+                        ((e.X - minX) / rangeX) * (targetWidth - 1),
+                        ((1.0 - (e.Y - minY) / rangeY)) * (targetHeight - 1),  // <- L’axe Y est inversé ici !
+                        0
+                        )
+                        );
 
             return (map, idList);
         }

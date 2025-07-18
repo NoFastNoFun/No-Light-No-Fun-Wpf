@@ -28,6 +28,7 @@ namespace Services.Matrix {
         }
 
         public void RouteUpdate(UpdateMessage packet) {
+            var sw = Stopwatch.StartNew();
             _buffers.Clear();
 
             int pixelsRoutés = 0;
@@ -99,7 +100,7 @@ namespace Services.Matrix {
 
                 if (patch != null) {
                     universe = patch.Universe;
-                    controllerIp = null; // PatchMap ne définit pas l’IP, il faudra la retrouver dans la config ou les routeurs
+                    controllerIp = null; 
 
                     var possibleRouters = _routers.Where(r =>
                         r.Universes.Any(u =>
@@ -151,6 +152,7 @@ namespace Services.Matrix {
                 var data = kv.Value;
                 _artNet.SendDmxFrame(ip, 6454, uni, data);
             }
+            sw.Stop();
 
         }
     }

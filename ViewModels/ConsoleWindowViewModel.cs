@@ -342,7 +342,7 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
                 return;
             }
 
-            int delay = (int)(1000.0 / 60); // 60 fps cible, peu importe la vidéo
+            int delay = (int)(1000.0 / 120); 
             using var frame = new Mat();
 
             try {
@@ -357,7 +357,7 @@ namespace No_Fast_No_Fun_Wpf.ViewModels {
                     _listener.SimulateUpdate(updateMsg);
                     _routingService.RouteUpdate(updateMsg);
 
-                    await Task.Delay(delay, token); // temporisation fixe, peu importe la frame source
+                    await Task.Delay(delay, token); 
                 }
             }
             catch (TaskCanceledException) {
